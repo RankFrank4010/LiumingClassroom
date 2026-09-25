@@ -1,0 +1,106 @@
+name: Cache Delete
+
+on:
+  pull_request_target:
+    types: [closed]
+
+  workflow_dispatch:
+    inputs:
+      delete_all:
+        description: "删除全部缓存(覆盖其他选择)"
+        required: false
+        default: false
+        type: boolean
+      branch_name:
+        description: "要删除缓存的分支名"
+        required: false
+        type: string
+      cache_key_pattern:
+        description: "缓存键匹配"
+        required: false
+        type: string
+      max_delete_count:
+        description: "最大删除条数(可选,默认全部)"
+        required: false
+        type: string
+        default: ""
+
+  workflow_call:
+    inputs:
+      branch_name:
+        description: "要删除缓存的分支名"
+        required: true
+        type: string
+      cache_key_pattern:
+        description: "缓存键匹配"
+        required: false
+        type: string
+
+  schedule:
+    - cron: "0 2 * * 0" # 每周日UTC 2:00 (北京时间10:00) 清理非main分支缓存
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  delete-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete PR cache
+        if: github.event_name == 'pull_request_target'
+        uses: baiyao105/gh-cache-cleaner@v1
+        with:
+          token: ${{ github.token }}
+          branches: |
+            refs/pull/${{ github.event.pull_request.number }}/merge
+            refs/heads/${{ github.event.pull_request.head.ref }}
+
+      - name: Delete all caches
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.delete_all == 'true'
+        uses: baiyao105/gh-cache-cleaner@v1
+        with:
+          token: ${{ github.token }}
+          delete_all: true
+          max_delete_count: ${{ github.event.inputs.max_delete_count != '' && github.event.inputs.max_delete_count || -1 }}
+          cache_key_pattern: ${{ github.event.inputs.cache_key_pattern != '' && github.event.inputs.cache_key_pattern || '*' }}
+
+      - name: Delete branch cache
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.delete_all == 'false' && github.event.inputs.branch_name != ''
+        uses: baiyao105/gh-cache-cleaner@v1
+        with:
+          token: ${{ github.token }}
+          branches: ${{ github.event.inputs.branch_name }}
+          max_delete_count: ${{ github.event.inputs.max_delete_count != '' && github.event.inputs.max_delete_count || -1 }}
+          cache_key_pattern: ${{ github.event.inputs.cache_key_pattern != '' && github.event.inputs.cache_key_pattern || '*' }}
+
+      - name: Delete cache by pattern only
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.delete_all == 'false' && github.event.inputs.branch_name == '' && github.event.inputs.cache_key_pattern != ''
+        uses: baiyao105/gh-cache-cleaner@v1
+        with:
+          token: ${{ github.token }}
+          delete_all: true
+          cache_key_pattern: ${{ github.event.inputs.cache_key_pattern }}
+          max_delete_count: ${{ github.event.inputs.max_delete_count != '' && github.event.inputs.max_delete_count || -1 }}
+
+      - name: Delete non-main branch caches (scheduled)
+        if: github.event_name == 'schedule'
+        uses: baiyao105/gh-cache-cleaner@v1
+        with:
+          token: ${{ github.token }}
+          delete_all: true
+          exclude_branches: "main"
+
+      - name: Delete cache from workflow call
+        if: github.event_name == 'workflow_call'
+        uses: baiyao105/gh-cache-cleaner@v1
+        with:
+          token: ${{ github.token }}
+          branches: ${{ inputs.branch_name }}
+          cache_key_pattern: ${{ inputs.cache_key_pattern != '' && inputs.cache_key_pattern || '*' }}
+
+      - name: Preview caches (no action specified)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.delete_all == 'false' && github.event.inputs.branch_name == '' && github.event.inputs.cache_key_pattern == ''
+        uses: baiyao105/gh-cache-cleaner@v1
+        with:
+          token: ${{ github.token }}

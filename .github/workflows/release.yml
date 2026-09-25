@@ -1,0 +1,154 @@
+name: 生成 Changelog 并发布版本
+
+on:
+  workflow_call:
+    inputs:
+      run_id:
+        required: true
+        type: string
+      build_type:
+        description: "类型 (Release/Nightly)"
+        required: false
+        default: "Release"
+        type: string
+      release_version:
+        description: "发布版本号"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  generate-changelog-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Repository
+        run: |
+          if [ "${{ github.repository }}" != "Class-Widgets/Class-Widgets" ]; then
+            echo "[DEBUG] 工作流不在主仓库"
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release directory
+        run: |
+          mkdir -p release
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: ClassWidgets-Packages
+          path: artifacts
+          run-id: ${{ inputs.run_id }}
+
+      - name: Prepare artifacts for release
+        shell: bash
+        run: |
+          if [ ! "$(ls -A artifacts 2>/dev/null)" ]; then
+            exit 1
+          fi
+          find artifacts -name "*.zip" -type f -exec cp {} release/ \;
+          find artifacts -name "*.deb" -type f -exec cp {} release/ \;
+          if [ -f "artifacts/file_provenance.json" ]; then
+            cp -f artifacts/file_provenance.json release/
+          fi
+          if [ ! "$(ls -A release 2>/dev/null)" ]; then
+            exit 1
+          fi
+          echo "发布的文件:"
+          ls -la release/
+
+      - name: Import GPG key
+        if: ${{ inputs.release_version != '' }}
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+
+      - name: Create Tag
+        if: ${{ inputs.release_version != '' }}
+        run: |
+          tag_name="${{ inputs.release_version }}"
+          echo "[DEBUG] 创建tag: $tag_name"
+          if git rev-parse "$tag_name" >/dev/null 2>&1; then
+            echo "[DEBUG] 标签 $tag_name 已存在"
+          else
+            if [[ "${{ inputs.build_type }}" == "Nightly" ]]; then
+              tag_message="Nightly $tag_name"
+            else
+              tag_message="Release $tag_name"
+            fi
+            git tag -s "$tag_name" -m "$tag_message"
+            git push origin "$tag_name"
+          fi
+
+      - name: Clear Nightly-Builds
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_VERSION: ${{ inputs.release_version }}
+        run: |
+          echo "当前要发布的版本: $CURRENT_VERSION"
+          nightly_releases=$(gh release list --limit 4 --json tagName,name | jq -r '.[] | select(.tagName | contains("-nightly")) | .tagName' || true)
+          if [ -z "$nightly_releases" ]; then
+            echo "[DEBUG] 未找到旧的 nightly 版本"
+            exit 0
+          fi
+          echo "[DEBUG] 找到的 nightly 版本:"
+          echo "$nightly_releases"
+          for release in $nightly_releases; do
+            if [ "$release" != "$CURRENT_VERSION" ]; then
+              echo "[DEBUG] 删除旧版本: $release"
+              gh release delete "$release" --yes --cleanup-tag || echo "[DEBUG] 删除 $release 时失败"
+            else
+              echo "[DEBUG] 保留版本: $release"
+            fi
+          done
+
+      - name: Set up git-cliff
+        uses: kenji-miyake/setup-git-cliff@v2
+
+      - name: Generate a changelog
+        run: |
+          if [[ "${{ inputs.build_type }}" == "Nightly" ]]; then
+            git cliff --config .github/cliff.nightly.toml --latest --output CHANGELOG.md
+          else
+            git cliff --config .github/cliff.toml --latest --output CHANGELOG.md
+          fi
+
+      - name: Append file info to changelog
+        shell: bash
+        run: |
+          if [ -f "artifacts/file-info.md" ]; then
+            echo "" >> CHANGELOG.md
+            echo "---" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            cat artifacts/file-info.md >> CHANGELOG.md
+            echo "[DEBUG] 已将包信息添加到 Changelog"
+            rm -f artifacts/file-info.md
+          else
+            echo "[DEBUG] 未找到 file-info.md 文件"
+          fi
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_version || github.ref_name }}
+          name: ${{ inputs.build_type == 'Nightly' && format('🌙 Nightly Build {0}', inputs.release_version) || format('🚀 Release {0}', inputs.release_version || github.ref_name) }}
+          files: release/*
+          body_path: CHANGELOG.md
+          draft: ${{ inputs.build_type == 'Release' }}
+          prerelease: ${{ inputs.build_type == 'Nightly' }}
+          generate_release_notes: false
+          make_latest: ${{ inputs.build_type == 'Release' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

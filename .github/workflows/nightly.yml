@@ -1,0 +1,75 @@
+name: Nightly-Builds
+
+on:
+  schedule:
+    - cron: "55 15 * * *" # UTC+8 23:55
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: "强制构建 nightly-version"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  pull-requests: read
+  actions: write
+
+jobs:
+  check-commits:
+    name: Check Commits
+    runs-on: ubuntu-latest
+    outputs:
+      has-new-commits: ${{ steps.check-commits.outputs.has-new-commits }}
+      nightly_version: ${{ steps.generate-version.outputs.nightly_version }}
+    steps:
+      - name: Check Repository
+        run: |
+          if [ "${{ github.repository }}" != "Class-Widgets/Class-Widgets" ]; then
+            echo "[DEBUG] 工作流不在主仓库"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create Nightly Version
+        id: generate-version
+        run: |
+          nightly_version="v$(date -u +%Y%m%d)-nightly"
+          echo "nightly_version=$nightly_version" >> $GITHUB_OUTPUT
+          echo "Nightly-Version: $nightly_version" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check for New Commits
+        id: check-commits
+        uses: adriangl/check-new-commits-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          seconds: 86400 # 24小时内的提交
+
+  build-nightly:
+    name: Build Nightly-Builds
+    needs: [check-commits]
+    if: needs.check-commits.outputs.has-new-commits == 'true' || github.event.inputs.force_build == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      build_type: "Nightly"
+      is_signing: false
+      release_version: ${{ needs.check-commits.outputs.nightly_version }}
+    secrets: inherit
+
+  release-nightly:
+    name: Publish Nightly
+    needs: [check-commits, build-nightly]
+    if: needs.build-nightly.result == 'success' && needs.build-nightly.outputs.package_count > 0
+    uses: ./.github/workflows/release.yml
+    with:
+      run_id: ${{ needs.build-nightly.outputs.run_id }}
+      build_type: "Nightly"
+      release_version: ${{ needs.check-commits.outputs.nightly_version }}
+    secrets: inherit

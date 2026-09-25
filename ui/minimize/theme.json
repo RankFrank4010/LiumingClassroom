@@ -1,0 +1,18 @@
+{
+  "name": "小尺寸",
+  "support_dark_mode": true,
+  "default_theme": null,
+  "radius": "8px",
+  "spacing": -9,
+  "height": 110,
+  "shadow": true,
+  "delta": 35,
+  "widget_width": {
+    "widget-time.ui": 180,
+    "widget-countdown.ui": 170,
+    "widget-current-activity.ui": 290,
+    "widget-next-activity.ui": 240,
+    "widget-countdown-day.ui": 180,
+    "widget-weather.ui": 180
+  }
+}
