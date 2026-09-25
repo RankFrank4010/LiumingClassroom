@@ -140,7 +140,7 @@ jobs:
           fi
 
       - name: Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.release_version || github.ref_name }}
           name: ${{ inputs.build_type == 'Nightly' && format('🌙 Nightly Build {0}', inputs.release_version) || format('🚀 Release {0}', inputs.release_version || github.ref_name) }}
