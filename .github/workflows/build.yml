@@ -511,14 +511,32 @@ jobs:
             --hidden-import darkdetect \
             --hidden-import PyQt5.QtWebSockets \
             --hidden-import win32timezone \
+            --exclude-module PyQt5.QtQml \
+            --exclude-module PyQt5.QtQuick \
+            --exclude-module PyQt5.QtQuickWidgets \
+            --exclude-module PyQt5.QtQmlModels \
+            --exclude-module PyQt5.QtDBus \
             --optimize 2
 
-          # temp: 修复 ssl 相关 dll 打包错误
+          # temp: 修复 ssl 相关 dll + Win7 UCRT 打包
           DLLDIR="$(uv run --no-dev python -c 'import sys, os; print(os.path.join(sys.base_prefix, "DLLs"))')"
-          echo "[DEBUG] Copying SSL binaries from $DLLDIR"
-          cp -af "$DLLDIR/_ssl.pyd" "dist/LiumingClassroom/" || true
-          cp -af "$DLLDIR/libcrypto-1_1-x64.dll" "dist/LiumingClassroom/" || true
-          cp -af "$DLLDIR/libssl-1_1-x64.dll" "dist/LiumingClassroom/" || true
+          OUTDIR="dist/LiumingClassroom"
+          if [[ "${{ matrix.arch }}" == "x86" ]]; then
+            SSL_SUFFIX=""; UCRT_ARCH="x86"
+          else
+            SSL_SUFFIX="-x64"; UCRT_ARCH="x64"
+          fi
+          echo "[DEBUG] Copying SSL binaries from $DLLDIR (suffix='${SSL_SUFFIX}')"
+          cp -af "$DLLDIR/_ssl.pyd" "$OUTDIR/" || true
+          cp -af "$DLLDIR/libcrypto-1_1${SSL_SUFFIX}.dll" "$OUTDIR/" || true
+          cp -af "$DLLDIR/libssl-1_1${SSL_SUFFIX}.dll" "$OUTDIR/" || true
+          UCRTSRC="$(ls -d "/c/Program Files (x86)/Windows Kits/10/Redist"/*/ucrt/DLLs/${UCRT_ARCH} 2>/dev/null | sort -r | head -1)"
+          if [[ -n "$UCRTSRC" ]]; then
+            echo "[DEBUG] Copying UCRT (Win7) from $UCRTSRC"
+            cp -af "$UCRTSRC"/*.dll "$OUTDIR/" || true
+          fi
+          # 剔除未使用的 QML/Quick/DBus 库
+          rm -f "$OUTDIR/PyQt5/Qt5/bin/Qt5Qml.dll" "$OUTDIR/PyQt5/Qt5/bin/Qt5QmlModels.dll" "$OUTDIR/PyQt5/Qt5/bin/Qt5Quick.dll" "$OUTDIR/PyQt5/Qt5/bin/Qt5DBus.dll" || true
 
           if [[ "$BUILD_TYPE" == "Release" ]]; then
             zip_name="LiumingClassroom-Windows-${{ matrix.arch }}"
