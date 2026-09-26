@@ -162,6 +162,13 @@ class DutyPrompt(QWidget):
 
 def show_duty_prompt(day: DayDuty, manager: Optional[DutyManager] = None) -> None:
     global _active_prompt
+    try:  # PPT 放映全屏期间不弹出任何事件提示
+        import display_state
+
+        if display_state.is_fullscreen():
+            return
+    except (ImportError, AttributeError):
+        pass
     try:
         from duty import get_duty_manager
 

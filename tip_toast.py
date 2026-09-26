@@ -587,6 +587,13 @@ def push_notification(
     duration: int = 2000,
 ) -> Dict[str, Any]:  # 推送通知
     global pushed_notification, notification_contents
+    try:  # PPT 放映全屏期间不显示任何事件通知
+        import display_state
+
+        if display_state.is_fullscreen():
+            return notification_contents
+    except (ImportError, AttributeError):
+        pass
     pushed_notification = True
     notification_contents = {
         "state": state,

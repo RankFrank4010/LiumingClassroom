@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QLabel,
     QPushButton,
+    QScroller,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -126,6 +127,10 @@ class DutyViewer(QDialog):
         self.duty_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         duty_layout.addWidget(self.duty_table)
 
+        # 触摸屏适配：表格支持手指滑动
+        QScroller.grabGesture(self.schedule_table.viewport(), QScroller.LeftMouseButtonGesture)
+        QScroller.grabGesture(self.duty_table.viewport(), QScroller.LeftMouseButtonGesture)
+
     # -- 行为 ------------------------------------------------------------- #
     def _shift_week(self, delta: int) -> None:
         self.week_offset += delta
@@ -154,11 +159,19 @@ class DutyViewer(QDialog):
         day = self.manager.get_day(today)
         student_text = "、".join(s.label for s in day.students) or "（未安排）"
         monitor_text = day.monitor.label if day.monitor else "（未安排）"
-        lines = [
-            f"<b>{today.strftime('%Y-%m-%d')} {WEEKDAY_NAMES[today.weekday()]}</b>",
-            f"{self.tr('值日班长')}：{monitor_text}",
-            f"{self.tr('值日生')}：{student_text}",
-        ]
+        if day.is_holiday:
+            name_part = f"{day.holiday_name}" if day.holiday_name else ""
+            holiday_text = f"今天{name_part}放假，值日安排已自动顺延"
+            lines = [
+                f"<b>{today.strftime('%Y-%m-%d')} {WEEKDAY_NAMES[today.weekday()]}</b>",
+                f"<span style='color:#e67e22'>🏖 {holiday_text}</span>",
+            ]
+        else:
+            lines = [
+                f"<b>{today.strftime('%Y-%m-%d')} {WEEKDAY_NAMES[today.weekday()]}</b>",
+                f"{self.tr('值日班长')}：{monitor_text}",
+                f"{self.tr('值日生')}：{student_text}",
+            ]
         if day.assignments:
             lines.append("<b>" + self.tr("职务指派") + "</b>")
             for name, people in day.assignments:
@@ -209,8 +222,14 @@ class DutyViewer(QDialog):
             duties = "  ".join(
                 f"{name}：{'、'.join(s.label for s in people) or '—'}" for name, people in day.assignments
             )
+            date_label = f"{WEEKDAY_NAMES[row]} {day.date.strftime('%m-%d')}"
+            if day.is_holiday:
+                name_part = f"（{day.holiday_name}）" if day.holiday_name else ""
+                date_label += f"{name_part}放假"
+            elif day.is_weekend:
+                date_label += "（周末）"
             values = [
-                f"{WEEKDAY_NAMES[row]} {day.date.strftime('%m-%d')}",
+                date_label,
                 monitor,
                 students,
                 duties,

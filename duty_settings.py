@@ -21,7 +21,6 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from qfluentwidgets import (
-    CardWidget,
     CaptionLabel,
     ComboBox,
     InfoBar,
@@ -32,13 +31,10 @@ from qfluentwidgets import (
     PlainTextEdit,
     PrimaryPushButton,
     PushButton,
-    SmoothScrollArea,
     SpinBox,
     StrongBodyLabel,
-    SubtitleLabel,
     SwitchButton,
     TableWidget,
-    TitleLabel,
 )
 
 from duty import (
@@ -61,6 +57,15 @@ from duty import (
     Student,
     get_duty_manager,
 )
+from settings_widgets import (
+    add_subtitle,
+    add_title,
+    block_card,
+    build_scroll_page,
+    new_section,
+    panel,
+    setting_card,
+)
 
 _PROMPT_STYLES = [PROMPT_OVERLAY, PROMPT_BANNER, PROMPT_WIDGET]
 _DELIVERY_MODES = [DELIVERY_POPUP, DELIVERY_WIDGET, DELIVERY_BOTH]
@@ -76,35 +81,24 @@ class DutySettingsPage(QWidget):
 
     # -- 构建界面 --------------------------------------------------------- #
     def _build_ui(self) -> None:
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        scroll = SmoothScrollArea(self)
-        scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
-        outer.addWidget(scroll)
+        layout, _content = build_scroll_page(self)
+        add_title(layout, self.tr("值日生"))
 
-        content = QWidget()
-        scroll.setWidget(content)
-        layout = QVBoxLayout(content)
-        layout.setContentsMargins(24, 18, 24, 40)
-        layout.setSpacing(14)
-
-        layout.addWidget(TitleLabel(self.tr("值日生"), content))
-
-        self._build_general(layout, content)
-        self._build_roster(layout, content)
-        self._build_schedule(layout, content)
-        self._build_monitor(layout, content)
-        self._build_assign(layout, content)
-        self._build_text(layout, content)
-        self._build_overrides(layout, content)
+        self._build_general(layout)
+        self._build_roster(layout)
+        self._build_schedule(layout)
+        self._build_monitor(layout)
+        self._build_assign(layout)
+        self._build_change_rules(layout)
+        self._build_text(layout)
+        self._build_overrides(layout)
 
         actions = QHBoxLayout()
-        preview_btn = PushButton(self.tr("预览提示"), content)
+        preview_btn = PushButton(self.tr("预览提示"))
         preview_btn.clicked.connect(self._preview_prompt)
-        viewer_btn = PushButton(self.tr("打开查看器"), content)
+        viewer_btn = PushButton(self.tr("打开查看器"))
         viewer_btn.clicked.connect(self._open_viewer)
-        save_btn = PrimaryPushButton(self.tr("保存"), content)
+        save_btn = PrimaryPushButton(self.tr("保存"))
         save_btn.clicked.connect(self.save_config)
         actions.addWidget(preview_btn)
         actions.addWidget(viewer_btn)
@@ -113,60 +107,57 @@ class DutySettingsPage(QWidget):
         layout.addLayout(actions)
         layout.addStretch(1)
 
-    def _card(self, layout: QVBoxLayout, title: str, desc: str = "") -> QVBoxLayout:
-        card = CardWidget()
-        body = QVBoxLayout(card)
-        body.setContentsMargins(18, 14, 18, 16)
-        body.setSpacing(8)
-        head = QVBoxLayout()
-        head.setSpacing(0)
-        head.addWidget(StrongBodyLabel(title, card))
-        if desc:
-            caption = CaptionLabel(desc, card)
-            caption.setWordWrap(True)
-            head.addWidget(caption)
-        body.addLayout(head)
-        layout.addWidget(card)
-        return body
+    def _build_general(self, layout: QVBoxLayout) -> None:
+        sec = new_section(layout)
+        add_subtitle(sec, self.tr("总开关与提示样式"))
 
-    def _build_general(self, layout: QVBoxLayout, parent: QWidget) -> None:
-        body = self._card(layout, self.tr("总开关与提示样式"), self.tr("启用值日生功能，并选择最后一节课结束时的提示形式。"))
-        row = QHBoxLayout()
-        row.addWidget(StrongBodyLabel(self.tr("启用值日生功能")))
-        row.addStretch(1)
         self.switch_enabled = SwitchButton()
-        self.switch_enabled.setChecked(False)
-        row.addWidget(self.switch_enabled)
-        body.addLayout(row)
+        self.switch_enabled.setOnText(self.tr("启用"))
+        self.switch_enabled.setOffText(self.tr("禁用"))
+        sec.addWidget(
+            setting_card(
+                self.tr("启用值日生功能"),
+                self.tr("启用后将在最后一节课结束时提示今日值日生。"),
+                self.switch_enabled,
+            )
+        )
 
-        row2 = QHBoxLayout()
-        row2.addWidget(StrongBodyLabel(self.tr("大型提示样式")))
-        row2.addStretch(1)
         self.combo_prompt = ComboBox()
         self.combo_prompt.addItems([self.tr("全屏遮罩"), self.tr("顶部横幅"), self.tr("中央大卡片")])
-        row2.addWidget(self.combo_prompt)
-        body.addLayout(row2)
+        sec.addWidget(
+            setting_card(
+                self.tr("大型提示样式"),
+                self.tr("最后一节课结束时大提示的呈现形式。"),
+                self.combo_prompt,
+            )
+        )
 
-        row3 = QHBoxLayout()
-        row3.addWidget(StrongBodyLabel(self.tr("提示送达方式")))
-        row3.addStretch(1)
         self.combo_delivery = ComboBox()
         self.combo_delivery.addItems([self.tr("弹窗提示"), self.tr("常驻小组件"), self.tr("两者都显示")])
-        row3.addWidget(self.combo_delivery)
-        body.addLayout(row3)
+        sec.addWidget(
+            setting_card(
+                self.tr("提示送达方式"),
+                self.tr("弹窗、常驻小组件，或两者同时显示。"),
+                self.combo_delivery,
+            )
+        )
 
-        row4 = QHBoxLayout()
-        row4.addWidget(StrongBodyLabel(self.tr("包含周六、周日排班")))
-        row4.addStretch(1)
         self.switch_weekend = SwitchButton()
-        row4.addWidget(self.switch_weekend)
-        body.addLayout(row4)
+        self.switch_weekend.setOnText(self.tr("启用"))
+        self.switch_weekend.setOffText(self.tr("禁用"))
+        sec.addWidget(
+            setting_card(
+                self.tr("包含周六、周日排班"),
+                self.tr("开启后周六、周日也会参与排班。"),
+                self.switch_weekend,
+            )
+        )
 
-    def _build_roster(self, layout: QVBoxLayout, parent: QWidget) -> None:
-        body = self._card(
+    def _build_roster(self, layout: QVBoxLayout) -> None:
+        body = block_card(
             layout,
             self.tr("学生名单"),
-            self.tr("录入姓名与学号（学号可留空）。排班支持“学号”排序或“录入顺序”。"),
+            self.tr("录入姓名与学号（学号可留空）。排班支持“按学号”或“按录入顺序”。"),
         )
         self.table_students = TableWidget()
         self.table_students.setColumnCount(2)
@@ -193,151 +184,171 @@ class DutySettingsPage(QWidget):
         btns.addWidget(export_btn)
         body.addLayout(btns)
 
-    def _build_schedule(self, layout: QVBoxLayout, parent: QWidget) -> None:
-        body = self._card(layout, self.tr("排班模式"), self.tr("学号排班：每天按顺序抽取若干学号；固定排班：周一至周五固定人员。"))
-        row = QHBoxLayout()
-        row.addWidget(StrongBodyLabel(self.tr("模式")))
-        row.addStretch(1)
+    def _build_schedule(self, layout: QVBoxLayout) -> None:
+        sec = new_section(layout)
+        add_subtitle(sec, self.tr("排班模式"))
+
         self.combo_mode = ComboBox()
         self.combo_mode.addItems([self.tr("学号排班"), self.tr("固定排班")])
         self.combo_mode.currentIndexChanged.connect(self._update_mode_panels)
-        row.addWidget(self.combo_mode)
-        body.addLayout(row)
+        sec.addWidget(
+            setting_card(
+                self.tr("模式"),
+                self.tr("学号排班：每天按顺序抽取若干学号；固定排班：周一至周五固定人员。"),
+                self.combo_mode,
+            )
+        )
 
-        self.id_panel = CardWidget()
-        ip = QVBoxLayout(self.id_panel)
-        ip.setContentsMargins(12, 10, 12, 12)
-        ip.setSpacing(6)
-        r1 = QHBoxLayout()
-        r1.addWidget(StrongBodyLabel(self.tr("每日人数")))
-        r1.addStretch(1)
+        self.id_panel, ip = panel(sec)
+
         self.spin_count = SpinBox()
         self.spin_count.setRange(0, 99)
-        r1.addWidget(self.spin_count)
-        ip.addLayout(r1)
+        ip.addWidget(setting_card(self.tr("每日人数"), '', self.spin_count))
 
-        r2 = QHBoxLayout()
-        r2.addWidget(StrongBodyLabel(self.tr("排序方式")))
-        r2.addStretch(1)
         self.combo_order = ComboBox()
         self.combo_order.addItems([self.tr("按学号"), self.tr("按录入顺序")])
-        r2.addWidget(self.combo_order)
-        ip.addLayout(r2)
+        ip.addWidget(setting_card(self.tr("排序方式"), '', self.combo_order))
 
-        r3 = QHBoxLayout()
-        r3.addWidget(StrongBodyLabel(self.tr("每周重置（周一从起始开始）")))
-        r3.addStretch(1)
         self.switch_weekly_reset = SwitchButton()
-        r3.addWidget(self.switch_weekly_reset)
-        ip.addLayout(r3)
+        self.switch_weekly_reset.setOnText(self.tr("启用"))
+        self.switch_weekly_reset.setOffText(self.tr("禁用"))
+        ip.addWidget(
+            setting_card(
+                self.tr("每周重置（周一从起始开始）"),
+                self.tr("开启后每周一都从起始学号/姓名重新开始。"),
+                self.switch_weekly_reset,
+            )
+        )
 
-        r4 = QHBoxLayout()
-        r4.addWidget(StrongBodyLabel(self.tr("起始学号/姓名")))
-        r4.addStretch(1)
         self.line_start_key = LineEdit()
         self.line_start_key.setPlaceholderText(self.tr("留空表示从第一个开始"))
         self.line_start_key.setFixedWidth(220)
-        r4.addWidget(self.line_start_key)
-        ip.addLayout(r4)
+        ip.addWidget(setting_card(self.tr("起始学号/姓名"), '', self.line_start_key))
 
-        r5 = QHBoxLayout()
-        r5.addWidget(StrongBodyLabel(self.tr("每日单独人数")))
-        r5.addStretch(1)
         self.switch_per_weekday = SwitchButton()
-        r5.addWidget(self.switch_per_weekday)
-        ip.addLayout(r5)
+        self.switch_per_weekday.setOnText(self.tr("启用"))
+        self.switch_per_weekday.setOffText(self.tr("禁用"))
+        ip.addWidget(
+            setting_card(
+                self.tr("每日单独人数"),
+                self.tr("开启后可分别为周一至周五设定人数。"),
+                self.switch_per_weekday,
+            )
+        )
+
+        weekday_row = QWidget()
+        pw_row = QHBoxLayout(weekday_row)
+        pw_row.setContentsMargins(0, 0, 0, 0)
+        pw_row.setSpacing(8)
         self.per_weekday_spins: List[SpinBox] = []
-        pw_row = QHBoxLayout()
-        for i, name in enumerate(["周一", "周二", "周三", "周四", "周五"]):
+        for name in ["周一", "周二", "周三", "周四", "周五"]:
             pw_row.addWidget(CaptionLabel(self.tr(name)))
             spin = SpinBox()
             spin.setRange(0, 99)
             spin.setFixedWidth(70)
             self.per_weekday_spins.append(spin)
             pw_row.addWidget(spin)
-        ip.addLayout(pw_row)
+        pw_row.addStretch(1)
+        spins_body = block_card(ip)
+        spins_body.addWidget(weekday_row)
 
-        self.fixed_panel = CardWidget()
-        fp = QVBoxLayout(self.fixed_panel)
-        fp.setContentsMargins(12, 10, 12, 12)
-        fp.setSpacing(6)
-        fp.addWidget(CaptionLabel(self.tr("输入学号或姓名（逗号分隔），也可点击“选择”从名单中挑选。")))
+        self.fixed_panel, fp = panel(sec)
+        fixed_body = block_card(
+            fp,
+            self.tr("固定人员"),
+            self.tr("输入学号或姓名（逗号分隔），也可点击“选择”从名单中挑选。"),
+        )
         self.fixed_edits: List[LineEdit] = []
         for name in ["周一", "周二", "周三", "周四", "周五"]:
             frow = QHBoxLayout()
-            frow.addWidget(StrongBodyLabel(self.tr(name)))
+            label = StrongBodyLabel(self.tr(name))
+            label.setMinimumWidth(48)
+            frow.addWidget(label)
             container, edit = self._make_key_row()
             self.fixed_edits.append(edit)
             frow.addWidget(container, 1)
-            fp.addLayout(frow)
+            fixed_body.addLayout(frow)
 
         self.id_panel.setVisible(True)
         self.fixed_panel.setVisible(False)
-        body.addWidget(self.id_panel)
-        body.addWidget(self.fixed_panel)
 
-    def _build_monitor(self, layout: QVBoxLayout, parent: QWidget) -> None:
-        body = self._card(layout, self.tr("值日班长"), self.tr("按周轮换：每周一位班长；按天：周一至周五分别指定。"))
-        r0 = QHBoxLayout()
-        r0.addWidget(StrongBodyLabel(self.tr("启用值日班长")))
-        r0.addStretch(1)
+    def _build_monitor(self, layout: QVBoxLayout) -> None:
+        sec = new_section(layout)
+        add_subtitle(sec, self.tr("值日班长"))
+
         self.switch_monitor = SwitchButton()
-        r0.addWidget(self.switch_monitor)
-        body.addLayout(r0)
+        self.switch_monitor.setOnText(self.tr("启用"))
+        self.switch_monitor.setOffText(self.tr("禁用"))
+        sec.addWidget(
+            setting_card(
+                self.tr("启用值日班长"),
+                self.tr("每天或每周指定一位值日班长。"),
+                self.switch_monitor,
+            )
+        )
 
-        r1 = QHBoxLayout()
-        r1.addWidget(StrongBodyLabel(self.tr("模式")))
-        r1.addStretch(1)
         self.combo_monitor_mode = ComboBox()
         self.combo_monitor_mode.addItems([self.tr("按周轮换"), self.tr("按天指定")])
         self.combo_monitor_mode.currentIndexChanged.connect(self._update_monitor_panels)
-        r1.addWidget(self.combo_monitor_mode)
-        body.addLayout(r1)
+        sec.addWidget(
+            setting_card(
+                self.tr("模式"),
+                self.tr("按周轮换：每周一位班长；按天指定：周一至周五分别指定。"),
+                self.combo_monitor_mode,
+            )
+        )
 
-        self.monitor_weekly_panel = QWidget()
-        mw = QHBoxLayout(self.monitor_weekly_panel)
-        mw.setContentsMargins(0, 0, 0, 0)
-        mw.addWidget(StrongBodyLabel(self.tr("班长轮换列表")))
+        self.monitor_weekly_panel, mw = panel(sec)
         container, self.line_monitor_weekly = self._make_key_row()
-        mw.addWidget(container, 1)
-        body.addWidget(self.monitor_weekly_panel)
+        mw.addWidget(
+            setting_card(self.tr("班长轮换列表"), '', container, expand_control=True)
+        )
 
-        self.monitor_daily_panel = QWidget()
-        md = QVBoxLayout(self.monitor_daily_panel)
-        md.setContentsMargins(0, 0, 0, 0)
+        self.monitor_daily_panel, md = panel(sec)
         self.daily_monitor_edits: List[LineEdit] = []
         for name in ["周一", "周二", "周三", "周四", "周五"]:
-            drow = QHBoxLayout()
-            drow.addWidget(StrongBodyLabel(self.tr(name)))
             container, edit = self._make_key_row()
             self.daily_monitor_edits.append(edit)
-            drow.addWidget(container, 1)
-            md.addLayout(drow)
-        body.addWidget(self.monitor_daily_panel)
+            md.addWidget(setting_card(self.tr(name), '', container, expand_control=True))
         self._update_monitor_panels()
 
-    def _build_assign(self, layout: QVBoxLayout, parent: QWidget) -> None:
-        body = self._card(layout, self.tr("职务指派（可选）"), self.tr("固定：每个职务指定人员；轮换：按周期自动轮转分配职务。"))
-        r0 = QHBoxLayout()
-        r0.addWidget(StrongBodyLabel(self.tr("启用职务指派")))
-        r0.addStretch(1)
-        self.switch_assign = SwitchButton()
-        r0.addWidget(self.switch_assign)
-        body.addLayout(r0)
+    def _build_assign(self, layout: QVBoxLayout) -> None:
+        sec = new_section(layout)
+        add_subtitle(sec, self.tr("职务指派（可选）"))
 
-        r1 = QHBoxLayout()
-        r1.addWidget(StrongBodyLabel(self.tr("指派方式")))
-        r1.addStretch(1)
+        self.switch_assign = SwitchButton()
+        self.switch_assign.setOnText(self.tr("启用"))
+        self.switch_assign.setOffText(self.tr("禁用"))
+        sec.addWidget(
+            setting_card(
+                self.tr("启用职务指派"),
+                self.tr("为拖地、扫地等职务指定人员，或按周期自动轮换。"),
+                self.switch_assign,
+            )
+        )
+
         self.combo_assign_mode = ComboBox()
         self.combo_assign_mode.addItems([self.tr("固定"), self.tr("轮换")])
         self.combo_assign_mode.currentIndexChanged.connect(self._update_assign_panels)
-        r1.addWidget(self.combo_assign_mode)
-        r1.addWidget(StrongBodyLabel(self.tr("轮换周期")))
         self.combo_assign_period = ComboBox()
         self.combo_assign_period.addItems([self.tr("按天"), self.tr("按周")])
-        r1.addWidget(self.combo_assign_period)
-        body.addLayout(r1)
+        assign_ctrl = QWidget()
+        ac = QHBoxLayout(assign_ctrl)
+        ac.setContentsMargins(0, 0, 0, 0)
+        ac.setSpacing(8)
+        ac.addWidget(CaptionLabel(self.tr("方式")))
+        ac.addWidget(self.combo_assign_mode)
+        ac.addWidget(CaptionLabel(self.tr("周期")))
+        ac.addWidget(self.combo_assign_period)
+        sec.addWidget(
+            setting_card(
+                self.tr("指派方式"),
+                self.tr("固定：每个职务指定人员；轮换：按周期自动轮转分配。"),
+                assign_ctrl,
+            )
+        )
 
+        body = block_card(sec)
         self.table_roles = TableWidget()
         self.table_roles.setColumnCount(2)
         self.table_roles.setHorizontalHeaderLabels([self.tr("职务"), self.tr("固定人员（学号/姓名，逗号分隔）")])
@@ -356,36 +367,107 @@ class DutySettingsPage(QWidget):
         body.addLayout(btns)
         self._update_assign_panels()
 
-    def _build_text(self, layout: QVBoxLayout, parent: QWidget) -> None:
-        body = self._card(
-            layout,
-            self.tr("自定义文案"),
-            self.tr("可用占位符：{monitor} {students} {assignments} {date} {weekday}。用 **文字** 表示标红，例如 **禁止逃跑！**"),
+    def _build_change_rules(self, layout: QVBoxLayout) -> None:
+        sec = new_section(layout)
+        add_subtitle(sec, self.tr("值日改班规则"))
+
+        self.switch_carry_monitor = SwitchButton()
+        self.switch_carry_monitor.setOnText(self.tr("启用"))
+        self.switch_carry_monitor.setOffText(self.tr("禁用"))
+        sec.addWidget(
+            setting_card(
+                self.tr("值日班长被取消时顺延"),
+                self.tr("改班时划掉值日班长，值日生自动多顺延一人补齐。"),
+                self.switch_carry_monitor,
+            )
         )
-        r1 = QHBoxLayout()
-        r1.addWidget(StrongBodyLabel(self.tr("大提示标题")))
-        r1.addStretch(1)
+
+        self.switch_priority_missed = SwitchButton()
+        self.switch_priority_missed.setOnText(self.tr("启用"))
+        self.switch_priority_missed.setOffText(self.tr("禁用"))
+        sec.addWidget(
+            setting_card(
+                self.tr("被取消值日者优先补值"),
+                self.tr("因故被取消值日的成员，缺几次就在之后的值日中优先安排几次。"),
+                self.switch_priority_missed,
+            )
+        )
+
+        body = block_card(sec, self.tr("休学用户"), self.tr("休学用户在名单中但不参与排班；可在“值日改班”中临时补值一天。"))
+        row = QHBoxLayout()
+        self.line_suspend = LineEdit()
+        self.line_suspend.setPlaceholderText(self.tr("输入学号或姓名"))
+        self.line_suspend.setFixedWidth(220)
+        self.line_suspend.setClearButtonEnabled(True)
+        add_suspend = PushButton(self.tr("添加"))
+        add_suspend.clicked.connect(self._add_suspended)
+        remove_suspend = PushButton(self.tr("移除选中"))
+        remove_suspend.clicked.connect(self._remove_suspended)
+        row.addWidget(self.line_suspend)
+        row.addWidget(add_suspend)
+        row.addWidget(remove_suspend)
+        row.addStretch(1)
+        body.addLayout(row)
+
+        self.list_suspended = QListWidget()
+        self.list_suspended.setMaximumHeight(160)
+        self.list_suspended.setAlternatingRowColors(True)
+        body.addWidget(self.list_suspended)
+
+    def _add_suspended(self) -> None:
+        key = self.line_suspend.text().strip()
+        if not key:
+            return
+        student = self.manager.student_by_key(key)
+        if student is None:
+            InfoBar.warning(
+                title="",
+                content=self.tr("未找到该学号/姓名对应的学生"),
+                orient=Qt.Horizontal,
+                position=InfoBarPosition.TOP,
+                duration=2500,
+                parent=self.window(),
+            )
+            return
+        display = student.label
+        if self.list_suspended.findItems(display, Qt.MatchExactly):
+            self.line_suspend.clear()
+            return
+        item = QListWidgetItem(display)
+        item.setData(Qt.UserRole, student.key)
+        self.list_suspended.addItem(item)
+        self.line_suspend.clear()
+
+    def _remove_suspended(self) -> None:
+        for item in self.list_suspended.selectedItems():
+            self.list_suspended.takeItem(self.list_suspended.row(item))
+
+    def _build_text(self, layout: QVBoxLayout) -> None:
+        sec = new_section(layout)
+        add_subtitle(sec, self.tr("自定义文案"))
+
         self.line_big_title = LineEdit()
         self.line_big_title.setFixedWidth(420)
-        r1.addWidget(self.line_big_title)
-        body.addLayout(r1)
+        sec.addWidget(setting_card(self.tr("大提示标题"), '', self.line_big_title))
 
-        r2 = QHBoxLayout()
-        r2.addWidget(StrongBodyLabel(self.tr("小组件标题")))
-        r2.addStretch(1)
         self.line_small = LineEdit()
         self.line_small.setFixedWidth(420)
-        r2.addWidget(self.line_small)
-        body.addLayout(r2)
+        sec.addWidget(setting_card(self.tr("小组件标题"), '', self.line_small))
 
-        body.addWidget(StrongBodyLabel(self.tr("大提示正文")))
+        body = block_card(
+            sec,
+            self.tr("大提示正文"),
+            self.tr(
+                "可用占位符：{monitor} {students} {assignments} {date} {weekday}。用 **文字** 表示标红，例如 **禁止逃跑！**"
+            ),
+        )
         self.text_big = PlainTextEdit()
         self.text_big.setMinimumHeight(120)
         body.addWidget(self.text_big)
 
     # -- 辅助控件 --------------------------------------------------------- #
-    def _build_overrides(self, layout: QVBoxLayout, parent: QWidget) -> None:
-        body = self._card(
+    def _build_overrides(self, layout: QVBoxLayout) -> None:
+        body = block_card(
             layout,
             self.tr("特别安排"),
             self.tr(
@@ -662,6 +744,15 @@ class DutySettingsPage(QWidget):
         for role in cfg.assign.roles:
             self._add_role_row(role.name, ",".join(role.people))
 
+        self.switch_carry_monitor.setChecked(cfg.change_rules.carry_over_monitor)
+        self.switch_priority_missed.setChecked(cfg.change_rules.priority_missed)
+        self.list_suspended.clear()
+        for key in cfg.suspended:
+            student = self.manager.student_by_key(key)
+            item = QListWidgetItem(student.label if student else key)
+            item.setData(Qt.UserRole, key)
+            self.list_suspended.addItem(item)
+
         self.line_big_title.setText(cfg.big_title)
         self.line_small.setText(cfg.small_text)
         self.text_big.setPlainText(cfg.big_text)
@@ -736,6 +827,12 @@ class DutySettingsPage(QWidget):
         cfg.prompt_delivery = _DELIVERY_MODES[max(0, self.combo_delivery.currentIndex())]
         cfg.include_weekend = self.switch_weekend.isChecked()
         cfg.overrides = self._collect_overrides()
+        cfg.change_rules.carry_over_monitor = self.switch_carry_monitor.isChecked()
+        cfg.change_rules.priority_missed = self.switch_priority_missed.isChecked()
+        cfg.suspended = [
+            self.list_suspended.item(i).data(Qt.UserRole) or self.list_suspended.item(i).text()
+            for i in range(self.list_suspended.count())
+        ]
         cfg.big_title = self.line_big_title.text()
         cfg.small_text = self.line_small.text()
         cfg.big_text = self.text_big.toPlainText()

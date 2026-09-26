@@ -36,6 +36,7 @@ from PyQt5.QtGui import (
     QFocusEvent,
     QFontDatabase,
     QFontMetrics,
+    QFont,
     QHideEvent,
     QIcon,
     QMouseEvent,
@@ -70,6 +71,7 @@ from qfluentwidgets import (
     PrimaryPushButton,
     ProgressRing,
     PushButton,
+    RoundMenu,
     SystemTrayMenu,
     Theme,
     isDarkTheme,
@@ -83,12 +85,14 @@ import splash
 splash_window = None
 
 import conf
+import display_state
 import list_
 import menu
 import tip_toast
 import utils
 import weather as db
 from basic_dirs import CONFIG_HOME, CW_HOME, SCHEDULE_DIR
+from class_banner import ClassBanner
 from conf import load_theme_config
 from extra_menu import ExtraMenu, open_settings, settings
 from file import config_center, schedule_center
@@ -128,6 +132,8 @@ notification_dedup_timeout = 10  # 通知去重超时时间(秒)
 last_time_announce_slot = None  # 上次报时的时间槽(YYYY-MM-DD_HH:MM)
 duty_prompted_date = None  # 已弹出值日生大提示的日期
 remote_client = None  # 远程配置 WebSocket 客户端
+ppt_fullscreen_active = False  # PPT 放映全屏中（隐藏小组件与所有事件显示）
+class_banner = None  # 上课时替代浮窗尾巴的极简一行横幅
 
 timeline_data = []
 next_lessons = []
@@ -612,11 +618,11 @@ def duty_maybe_prompt() -> None:  # 最后一节课结束时弹出值日生大�
         if not manager.config.enabled:
             return
         today_ = TimeManagerFactory.get_instance().get_today()
-        if today_.weekday() in (5, 6) and not manager.config.include_weekend:
-            return
         if duty_prompted_date == today_:
             return
         day = manager.get_day(today_)
+        if day.is_holiday or day.is_weekend:
+            return
         if not day.students and day.monitor is None:
             return
         duty_prompted_date = today_
@@ -674,6 +680,11 @@ def apply_remote_reload() -> None:
         reset_duty_manager()
     except Exception as e:
         logger.error(f"重新加载值日配置失败: {e}")
+    try:
+        # 远程可能改写了课表文件或切换了当前课表，需重新加载课表中心
+        schedule_center.update_schedule()
+    except Exception as e:
+        logger.error(f"重新加载课程表失败: {e}")
     try:
         current_mgr = globals().get('mgr')
         if current_mgr is not None:
@@ -930,6 +941,49 @@ def check_fullscreen() -> bool:  # 检查是否全屏
         return window_area >= screen_area * 0.95
         # logger.debug(f"覆盖屏幕: {is_covering_screen}, 窗口面积: {window_area}, 屏幕面积: {screen_area}, 是否全屏判断: {is_fullscreen}")
     return False
+
+
+PPT_PROCESSES = {'powerpnt.exe', 'wpp.exe'}  # PowerPoint / WPS 演示
+
+
+def _is_window_covering_screen(hwnd: int) -> bool:  # 判断窗口是否覆盖整个屏幕
+    user32 = ctypes.windll.user32
+    rect = RECT()
+    user32.GetWindowRect(hwnd, ctypes.byref(rect))
+    screen_rect_desktop = RECT()
+    user32.GetWindowRect(user32.GetDesktopWindow(), ctypes.byref(screen_rect_desktop))
+    is_covering_screen = (
+        rect.left <= screen_rect_desktop.left
+        and rect.top <= screen_rect_desktop.top
+        and rect.right >= screen_rect_desktop.right
+        and rect.bottom >= screen_rect_desktop.bottom
+    )
+    if is_covering_screen:
+        screen_area = (screen_rect_desktop.right - screen_rect_desktop.left) * (
+            screen_rect_desktop.bottom - screen_rect_desktop.top
+        )
+        window_area = (rect.right - rect.left) * (rect.bottom - rect.top)
+        return window_area >= screen_area * 0.95
+    return False
+
+
+def is_ppt_fullscreen() -> bool:  # 检测 PPT（PowerPoint/WPS 演示）放映是否处于全屏
+    if os.name != 'nt':
+        return False
+    user32 = ctypes.windll.user32
+    hwnd = user32.GetForegroundWindow()
+    if not hwnd or hwnd == user32.GetDesktopWindow() or hwnd == user32.GetShellWindow():
+        return False
+    # PowerPoint 放映窗口的类名为 screenClass
+    cls_buffer = ctypes.create_unicode_buffer(256)
+    user32.GetClassNameW(hwnd, cls_buffer, 256)
+    if cls_buffer.value.strip().lower() == 'screenclass':
+        return True
+    pid = ctypes.c_ulong()
+    user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+    if get_process_name(pid.value) not in PPT_PROCESSES:
+        return False
+    return _is_window_covering_screen(hwnd)
 
 
 class ErrorDialog(Dialog):  # 重大错误提示框
@@ -2075,6 +2129,42 @@ class FloatingWidget(QWidget):  # 浮窗
         self.close()
 
 
+def build_class_banner_text() -> str:
+    """上课横幅一行字：日期、周几、时间、当前课、下一节课。"""
+    today_ = TimeManagerFactory.get_instance().get_today()
+    week_names = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+    now_str = TimeManagerFactory.get_instance().get_current_time_str('%H:%M')
+    date_part = QCoreApplication.translate('main', '{m}月{d}日 {week} {time}').format(
+        m=today_.month,
+        d=today_.day,
+        week=week_names[today_.weekday()],
+        time=now_str,
+    )
+    parts = [date_part]
+    if current_state == 1 and current_lesson_name:
+        parts.append(
+            QCoreApplication.translate('main', '当前：{name}').format(name=current_lesson_name)
+        )
+    parts.append(
+        QCoreApplication.translate('main', '下一节：{name}').format(name=get_next_lessons_text())
+    )
+    return '　|　'.join(parts)
+
+
+def show_class_banner() -> None:
+    global class_banner
+    if class_banner is None:
+        class_banner = ClassBanner()
+    class_banner.set_theme_color(f"#{config_center.read_conf('Color', 'attend_class')}")
+    class_banner.show_text(build_class_banner_text())
+
+
+def hide_class_banner() -> None:
+    global class_banner
+    if class_banner is not None and class_banner.isVisible():
+        class_banner.close()
+
+
 class DesktopWidget(QWidget):  # 主要小组件
     def __init__(
         self,
@@ -2647,8 +2737,31 @@ class DesktopWidget(QWidget):  # 主要小组件
                 open_duty_viewer(self)
             except Exception as e:
                 logger.error(f'打开值日生查看器失败: {e}')
-        else:
-            self.rightReleaseEvent(event)
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.open_duty_context_menu()
+
+    def open_duty_context_menu(self) -> None:  # 值日生小组件右键菜单
+        menu = RoundMenu(parent=self)
+        try:
+            from duty import MODE_ID_ROTATION, get_duty_manager
+
+            manager = get_duty_manager()
+            if manager.config.enabled and manager.config.mode == MODE_ID_ROTATION:
+                menu.addAction(
+                    Action(fIcon.EDIT, self.tr('值日改班'), lambda: self._open_duty_adjust())
+                )
+        except Exception as e:
+            logger.error(f'构建值日生右键菜单失败: {e}')
+        menu.addAction(Action(fIcon.MORE, self.tr('更多选项'), self.open_extra_menu))
+        menu.exec(self.cursor().pos())
+
+    def _open_duty_adjust(self) -> None:
+        try:
+            from duty_adjust import open_duty_adjust
+
+            open_duty_adjust(self)
+        except Exception as e:
+            logger.error(f'打开值日改班失败: {e}')
 
     def _update_duty_widget(self) -> None:
         title = getattr(self, 'duty_title', None)
@@ -2688,7 +2801,7 @@ class DesktopWidget(QWidget):  # 主要小组件
             text.setText(body)
 
     def update_data(self, path: str = '') -> None:
-        global current_time, current_week, start_y, today
+        global current_time, current_week, start_y, today, ppt_fullscreen_active
 
         today = TimeManagerFactory.get_instance().get_today()
         current_time = TimeManagerFactory.get_instance().get_current_time_str('%H:%M:%S')
@@ -2699,10 +2812,31 @@ class DesktopWidget(QWidget):  # 主要小组件
         get_next_lessons()
         hide_status = get_hide_status()
 
-        if (hide_mode := config_center.read_conf('General', 'hide')) in ['1', '2']:  # 上课自动隐藏
+        if is_ppt_fullscreen():  # PPT 放映全屏：隐藏小组件与一切事件显示
+            display_state.set_fullscreen(True)
+            if not ppt_fullscreen_active:
+                ppt_fullscreen_active = True
+                if fw.isVisible():
+                    fw.close()
+                hide_class_banner()
+                mgr.full_hide_windows()
+        elif ppt_fullscreen_active:  # 退出 PPT 全屏：立刻恢复小组件
+            ppt_fullscreen_active = False
+            display_state.set_fullscreen(False)
+            mgr.show_windows()
+            hide_class_banner()
+
+        if ppt_fullscreen_active:
+            return  # PPT 全屏期间保持隐藏，跳过常规显示逻辑
+
+        hide_mode = config_center.read_conf('General', 'hide')
+        if hide_mode in ['1', '2']:  # 上课自动隐藏
             if mgr.state == hide_status:
                 if hide_status:
-                    mgr.decide_to_hide()
+                    if hide_mode == '1' and current_state == 1:
+                        mgr.full_hide_windows()  # 上课完全隐藏，由横幅替代尾巴
+                    else:
+                        mgr.decide_to_hide()
                 else:
                     mgr.show_windows()
         elif hide_mode == '3':  # 灵活隐藏
@@ -2710,9 +2844,20 @@ class DesktopWidget(QWidget):  # 主要小组件
                 mgr.hide_status = (-1, hide_status)
             if mgr.state == mgr.hide_status[1]:
                 if mgr.hide_status[1]:
-                    mgr.decide_to_hide()
+                    if current_state == 1:
+                        mgr.full_hide_windows()  # 上课完全隐藏，由横幅替代尾巴
+                    else:
+                        mgr.decide_to_hide()
                 else:
                     mgr.show_windows()
+
+        if hide_mode in ['1', '3'] and current_state == 1 and hide_status == 1 and mgr.state == 0:
+            # 上课且组件已隐藏：用极简横幅替代浮窗/尾巴
+            if fw.isVisible():
+                fw.close()
+            show_class_banner()
+        else:
+            hide_class_banner()
 
         if conf.is_temp_week():  # 调休日
             current_week = config_center.read_conf('Temp', 'set_week')
@@ -4098,6 +4243,20 @@ if __name__ == '__main__':
     scale_factor = float(config_center.read_conf('General', 'scale'))
     logger.info(f"当前缩放系数：{scale_factor * 100}%")
     app.setQuitOnLastWindowClosed(False)
+    # 任务栏/窗口图标：显式设置应用图标；Windows 下还需注册 AppUserModelID，
+    # 否则任务栏会沿用 python/打包 exe 的默认图标而非窗口图标
+    try:
+        from PyQt5.QtGui import QIcon
+
+        app.setWindowIcon(QIcon(str(conf.app_icon)))
+        if os.name == 'nt':
+            import ctypes
+
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                'cn.rankfrank.liumingclassroom'
+            )
+    except Exception as e:
+        logger.warning(f"设置应用图标失败: {e}")
     app.aboutToQuit.connect(_stop_remote_client)  # 退出时关闭远程配置连接
 
     logger.debug(

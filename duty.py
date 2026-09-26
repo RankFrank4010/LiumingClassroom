@@ -137,6 +137,23 @@ class DayOverride:
 
 
 @dataclass
+class ChangeRules:
+    """值日改班规则。"""
+
+    carry_over_monitor: bool = True  # 值日班长被取消时，值日生自动顺延一人
+    priority_missed: bool = True  # 被取消值日者后续优先补值（缺几次补几次）
+
+
+@dataclass
+class DayAdjustment:
+    """某一天的值日改班记录：划掉 + 补值。"""
+
+    struck: List[str] = field(default_factory=list)  # 被划掉的学生 key
+    added: List[str] = field(default_factory=list)  # 补值学生 key（含休学用户）
+    missed_delta: Dict[str, int] = field(default_factory=dict)  # 应用时对 missed 的增量（回滚用）
+
+
+@dataclass
 class DutyConfig:
     enabled: bool = False
     students: List[Student] = field(default_factory=list)
@@ -153,6 +170,13 @@ class DutyConfig:
     small_text: str = "今日值日生"
     anchor_date: str = ""  # 轮换锚点日期（YYYY-MM-DD），空表示今天
     overrides: Dict[str, DayOverride] = field(default_factory=dict)  # "YYYY-MM-DD" -> 特别安排
+    holiday_aware: bool = True  # 根据节假日/调休自动调整排班
+    change_rules: ChangeRules = field(default_factory=ChangeRules)
+    suspended: List[str] = field(default_factory=list)  # 休学用户 key（名单中但不参与排班）
+    adjustments: Dict[str, DayAdjustment] = field(default_factory=dict)  # 日期 -> 改班记录
+    missed: Dict[str, int] = field(default_factory=dict)  # 学生 key -> 待优先补值次数
+    missed_start: Dict[str, str] = field(default_factory=dict)  # 学生 key -> 最早缺值日期
+    priority_served: Dict[str, List[str]] = field(default_factory=dict)  # 日期 -> 已消费优先的学生
 
 
 @dataclass
@@ -162,6 +186,8 @@ class DayDuty:
     monitor: Optional[Student] = None
     assignments: List[Tuple[str, List[Student]]] = field(default_factory=list)
     is_weekend: bool = False
+    is_holiday: bool = False
+    holiday_name: str = ""  # 节假日名称（如「国庆节」）
 
 
 # --------------------------------------------------------------------------- #
@@ -211,6 +237,19 @@ def config_to_dict(config: DutyConfig) -> Dict[str, Any]:
             }
             for day, ov in config.overrides.items()
         },
+        "change_rules": asdict(config.change_rules),
+        "suspended": list(config.suspended),
+        "adjustments": {
+            day: {
+                "struck": list(adj.struck),
+                "added": list(adj.added),
+                "missed_delta": dict(adj.missed_delta),
+            }
+            for day, adj in config.adjustments.items()
+        },
+        "missed": dict(config.missed),
+        "missed_start": dict(config.missed_start),
+        "priority_served": {k: list(v) for k, v in config.priority_served.items()},
     }
 
 
@@ -287,6 +326,32 @@ def config_from_dict(data: Dict[str, Any]) -> DutyConfig:
             ],
             note=str(ov.get("note", "") or ""),
         )
+    cr = data.get("change_rules") or {}
+    config.change_rules = ChangeRules(
+        carry_over_monitor=bool(cr.get("carry_over_monitor", True)),
+        priority_missed=bool(cr.get("priority_missed", True)),
+    )
+    config.suspended = [str(x) for x in (data.get("suspended") or [])]
+    config.adjustments = {}
+    for day, adj in (data.get("adjustments") or {}).items():
+        if not isinstance(adj, dict):
+            continue
+        config.adjustments[str(day)] = DayAdjustment(
+            struck=[str(x) for x in (adj.get("struck") or [])],
+            added=[str(x) for x in (adj.get("added") or [])],
+            missed_delta={str(k): int(v) for k, v in (adj.get("missed_delta") or {}).items()},
+        )
+    config.missed = {
+        str(k): max(0, int(v)) for k, v in (data.get("missed") or {}).items()
+    }
+    config.missed_start = {
+        str(k): str(v) for k, v in (data.get("missed_start") or {}).items()
+    }
+    config.priority_served = {
+        str(k): [str(x) for x in v]
+        for k, v in (data.get("priority_served") or {}).items()
+        if isinstance(v, list)
+    }
     return config
 
 
@@ -517,6 +582,52 @@ class DutyManager:
     def list_overrides(self) -> List[str]:
         return sorted(self.config.overrides)
 
+    # -- 值日改班 ---------------------------------------------------------- #
+    def is_suspended(self, key: str) -> bool:
+        return bool(key) and key in self.config.suspended
+
+    def set_suspended(self, keys: List[str]) -> None:
+        self.config.suspended = [str(k) for k in keys if str(k).strip()]
+        self.save()
+
+    def apply_adjustment(self, day: str, struck: List[str], added: List[str]) -> DayAdjustment:
+        """应用某天的值日改班：记录划掉与补值，并为被取消者累计待补值次数。"""
+        struck = [k for k in struck if k]
+        added = [k for k in added if k]
+        old = self.config.adjustments.get(str(day))
+        missed_delta: Dict[str, int] = {}
+        if self.config.change_rules.priority_missed:
+            old_delta = old.missed_delta if old else {}
+            for k in struck:
+                if k not in old_delta:  # 已累计过的不重复计
+                    missed_delta[k] = 1
+        adj = DayAdjustment(struck=struck, added=added, missed_delta=missed_delta)
+        self.config.adjustments[str(day)] = adj
+        for k, delta in missed_delta.items():
+            self.config.missed[k] = self.config.missed.get(k, 0) + delta
+            self.config.missed_start.setdefault(k, str(day))  # 优先补值从次日开始
+        self.save()
+        return adj
+
+    def get_adjustment(self, day: str) -> Optional[DayAdjustment]:
+        return self.config.adjustments.get(str(day))
+
+    def remove_adjustment(self, day: str) -> bool:
+        """回滚某天的改班记录，并撤销当日对待补值次数的影响。"""
+        adj = self.config.adjustments.pop(str(day), None)
+        if adj is None:
+            return False
+        for k, delta in adj.missed_delta.items():
+            remain = self.config.missed.get(k, 0) - delta
+            if remain > 0:
+                self.config.missed[k] = remain
+            else:
+                self.config.missed.pop(k, None)
+                self.config.missed_start.pop(k, None)
+        self.config.priority_served.pop(str(day), None)
+        self.save()
+        return True
+
     # -- 排班引擎 --------------------------------------------------------- #
     def _anchor(self) -> dt.date:
         raw = (self.config.anchor_date or "").strip()
@@ -534,9 +645,57 @@ class DutyManager:
     def _week_index(self, d: dt.date) -> int:
         return (self._monday(d) - self._monday(self._anchor())).days // 7
 
+    # -- 节假日感知 -------------------------------------------------------- #
+    def _day_info(self, d: dt.date):
+        """节假日信息；关闭 holiday_aware 时返回普通工作日。"""
+        if not self.config.holiday_aware:
+            from holiday import DayInfo, KIND_WORKDAY
+
+            return DayInfo(kind=KIND_WORKDAY)
+        try:
+            from holiday import get_day_info
+
+            return get_day_info(d)
+        except Exception as e:
+            logger.warning(f"节假日查询失败，按普通工作日处理: {e}")
+            from holiday import DayInfo, KIND_WORKDAY
+
+            return DayInfo(kind=KIND_WORKDAY)
+
+    def _effective_weekday(self, d: dt.date) -> int:
+        """该日期排班时使用的周几：补班日映射到其对应工作日的周几。"""
+        info = self._day_info(d)
+        if info.is_makeup and info.effective_weekday is not None:
+            return info.effective_weekday
+        return d.weekday()
+
+    def _is_school_day(self, d: dt.date) -> bool:
+        """该日期是否到校上课（用于轮换顺延：假期不计入、补班日计入）。"""
+        if self.config.overrides.get(d.isoformat()) is not None:
+            return True  # 特别安排视同到校
+        info = self._day_info(d)
+        if info.is_holiday:
+            return False
+        if info.is_makeup:
+            return True
+        if d.weekday() in WEEKEND_DAYS and not self.config.include_weekend:
+            return False
+        return True
+
     def _school_day_index(self, d: dt.date) -> int:
-        weeks = (self._monday(d) - self._monday(self._anchor())).days // 7
-        return weeks * len(active_weekdays(self.config.include_weekend)) + d.weekday()
+        """从锚点起累计的「实际上课日」序号（假期跳过、补班日计入，轮换顺延）。"""
+        anchor = self._anchor()
+        if d < anchor:
+            # 锚点之前的日期退回原公式（轮换不回溯历史）
+            weeks = (self._monday(d) - self._monday(anchor)).days // 7
+            return weeks * len(active_weekdays(self.config.include_weekend)) + d.weekday()
+        count = 0
+        cur = anchor
+        while cur <= d:
+            if self._is_school_day(cur):
+                count += 1
+            cur += dt.timedelta(days=1)
+        return count - 1  # 锚点当天序号为 0，与原公式一致
 
     def _ordered_index_of(self, key: str, students: List[Student]) -> Optional[int]:
         for i, s in enumerate(students):
@@ -544,13 +703,97 @@ class DutyManager:
                 return i
         return None
 
+    def _rotation_pool(self) -> List[Student]:
+        """参与轮换的学生（按排班顺序，剔除休学用户）。"""
+        return [s for s in self.ordered_students() if not self.is_suspended(s.key)]
+
+    def _priority_students(self, d: dt.date, capacity: int) -> List[Student]:
+        """当日应优先补值的学生（缺值日几次就几次优先分配），并按天消费优先次数。"""
+        if capacity <= 0 or not self.config.change_rules.priority_missed:
+            return []
+        day_key = d.isoformat()
+        served = self.config.priority_served.get(day_key)
+        if served is not None:
+            # 当天已消费过优先：固定返回当日名单，保证幂等
+            pool = self._rotation_pool()
+            seen = set()
+            result = []
+            for k in served:
+                for s in pool:
+                    if s.key == k and k not in seen:
+                        seen.add(k)
+                        result.append(s)
+            return result
+        # 仅补缺值日之后的值日（缺值日当天不算）
+        pending = [
+            k
+            for k, v in self.config.missed.items()
+            if v > 0 and self.config.missed_start.get(k, "") < day_key
+        ]
+        if not pending:
+            return []
+        pool = self._rotation_pool()
+        candidates = [s for s in pool if s.key in pending]
+        if not candidates:
+            return []
+        if d <= dt.date.today():
+            # 到达当天首次计算：消费一次优先名额
+            served = [s.key for s in candidates[:capacity]]
+            self.config.priority_served[day_key] = served
+            for k in served:
+                remain = self.config.missed.get(k, 0) - 1
+                if remain > 0:
+                    self.config.missed[k] = remain
+                else:
+                    self.config.missed.pop(k, None)
+            self.save()
+        keys = list(served or [])
+        picked = [s for k in keys for s in pool if s.key == k]
+        # 去重
+        seen = set()
+        result = []
+        for s in picked:
+            if s.key not in seen:
+                seen.add(s.key)
+                result.append(s)
+        return result
+
+    def _carry_students(self, d: dt.date, n: int, exclude_keys: set) -> List[Student]:
+        """从当日排班窗口之后顺延 n 名学生（跳过被排除者与休学用户）。"""
+        if n <= 0:
+            return []
+        pool = self._rotation_pool()
+        if not pool:
+            return []
+        if self.config.mode == MODE_FIXED:
+            base = self._fixed_students(d)
+        else:
+            base = self._id_rotation_students(d)
+        base = [s for s in base if s.key not in exclude_keys]
+        start = 0
+        if base:
+            idx = self._ordered_index_of(base[-1].key, pool)
+            if idx is not None:
+                start = idx + 1
+        out: List[Student] = []
+        i = start
+        guard = 0
+        while len(out) < n and guard < len(pool) * 2:
+            s = pool[i % len(pool)]
+            if s.key not in exclude_keys and all(o.key != s.key for o in out):
+                out.append(s)
+            i += 1
+            guard += 1
+        return out
+
     def _id_rotation_students(self, d: dt.date) -> List[Student]:
-        students = self.ordered_students()
+        students = self._rotation_pool()
         total = len(students)
         if total == 0:
             return []
         rule = self.config.id_rotation
-        count = max(0, min(rule.count_for(d.weekday()), total))
+        weekday = self._effective_weekday(d)
+        count = max(0, min(rule.count_for(weekday), total))
         if count == 0:
             return []
         base = 0
@@ -559,13 +802,17 @@ class DutyManager:
             if idx is not None:
                 base = idx
         if rule.weekly_reset:
-            start = (base + d.weekday() * count) % total
+            start = (base + weekday * count) % total
         else:
             start = (base + self._school_day_index(d) * count) % total
         return [students[(start + i) % total] for i in range(count)]
 
     def _fixed_students(self, d: dt.date) -> List[Student]:
-        keys = self.config.fixed.get(str(d.weekday()), [])
+        keys = [
+            k
+            for k in self.config.fixed.get(str(self._effective_weekday(d)), [])
+            if not self.is_suspended(k)
+        ]
         return self.labels_for(keys)
 
     def _monitor(self, d: dt.date) -> Optional[Student]:
@@ -573,7 +820,7 @@ class DutyManager:
         if not mc.enabled:
             return None
         if mc.mode == MONITOR_DAILY:
-            return self.student_by_key(mc.daily.get(str(d.weekday()), ""))
+            return self.student_by_key(mc.daily.get(str(self._effective_weekday(d)), ""))
         if not mc.weekly:
             return None
         idx = self._week_index(d) % len(mc.weekly)
@@ -597,6 +844,39 @@ class DutyManager:
             buckets[(i // block + period) % role_count].append(student)
         return [(roles[i].name, buckets[i]) for i in range(role_count)]
 
+    def _apply_day_changes(self, d: dt.date, day: DayDuty) -> None:
+        """把优先补值与当日改班记录应用到位日结果上。"""
+        # 1) 优先补值：缺值日者排在当日名单最前（占用当日名额）
+        count_for_day = max(0, len(day.students))
+        priority = self._priority_students(d, count_for_day)
+        if priority:
+            existing = {s.key for s in day.students}
+            merged = [s for s in priority if s.key not in existing]
+            rest = day.students[: max(0, count_for_day - len(merged))]
+            day.students = merged + rest
+        # 2) 当日改班记录：划掉 + 顺延 + 补值
+        adj = self.config.adjustments.get(d.isoformat())
+        if adj is None:
+            return
+        struck_set = set(adj.struck)
+        if struck_set:
+            day.students = [s for s in day.students if s.key not in struck_set]
+            extra = 0
+            if (
+                self.config.change_rules.carry_over_monitor
+                and day.monitor is not None
+                and day.monitor.key in struck_set
+            ):
+                extra = 1  # 值日班长被取消：值日生自动顺延一人
+            existing = {s.key for s in day.students} | struck_set | set(adj.added)
+            day.students.extend(self._carry_students(d, len(adj.struck) + extra, existing))
+        if adj.added:
+            existing = {s.key for s in day.students}
+            for k in adj.added:
+                s = self.student_by_key(k)
+                if s is not None and s.key not in existing:
+                    day.students.append(s)
+
     def get_day(self, d: Optional[dt.date] = None) -> DayDuty:
         d = d or dt.date.today()
         day = DayDuty(date=d)
@@ -612,8 +892,20 @@ class DutyManager:
             day.assignments = [
                 (name, self.labels_for(people)) for name, people in override.assignments
             ]
+            self._apply_day_changes(d, day)
             return day
-        if d.weekday() in WEEKEND_DAYS and not self.config.include_weekend:
+        if self.config.holiday_aware:
+            info = self._day_info(d)
+            if info.is_holiday:
+                day.is_holiday = True
+                day.holiday_name = info.name
+                return day  # 法定节假日：无人值日，轮换已顺延
+            if info.is_makeup:
+                pass  # 调休补班日：正常排班（按对应周几执行），继续往下走
+            elif d.weekday() in WEEKEND_DAYS and not self.config.include_weekend:
+                day.is_weekend = True
+                return day
+        elif d.weekday() in WEEKEND_DAYS and not self.config.include_weekend:
             day.is_weekend = True
             return day
         if self.config.mode == MODE_FIXED:
@@ -622,6 +914,7 @@ class DutyManager:
             day.students = self._id_rotation_students(d)
         day.monitor = self._monitor(d)
         day.assignments = self._assignments(d)
+        self._apply_day_changes(d, day)
         return day
 
     def get_week(self, d: Optional[dt.date] = None) -> List[DayDuty]:
@@ -629,6 +922,52 @@ class DutyManager:
         d = d or dt.date.today()
         monday = self._monday(d)
         return [self.get_day(monday + dt.timedelta(days=i)) for i in active_weekdays(self.config.include_weekend)]
+
+    def get_base_day(self, d: Optional[dt.date] = None) -> DayDuty:
+        """计算未经改班/优先补值修饰的当日排班（用于改班界面展示原始名单）。"""
+        import copy
+
+        d = d or dt.date.today()
+        config_backup = self.config
+        try:
+            self.config = copy.deepcopy(self.config)
+            self.config.adjustments = {}
+            self.config.missed = {}
+            self.config.priority_served = {}
+            day = DayDuty(date=d)
+            override = self.config.overrides.get(d.isoformat())
+            if override is not None:
+                day.students = self.labels_for(override.students)
+                day.monitor = (
+                    self.student_by_key(override.monitor) if override.monitor else self._monitor(d)
+                )
+                day.assignments = [
+                    (name, self.labels_for(people)) for name, people in override.assignments
+                ]
+                return day
+            if self.config.holiday_aware:
+                info = self._day_info(d)
+                if info.is_holiday:
+                    day.is_holiday = True
+                    day.holiday_name = info.name
+                    return day
+                if info.is_makeup:
+                    pass
+                elif d.weekday() in WEEKEND_DAYS and not self.config.include_weekend:
+                    day.is_weekend = True
+                    return day
+            elif d.weekday() in WEEKEND_DAYS and not self.config.include_weekend:
+                day.is_weekend = True
+                return day
+            if self.config.mode == MODE_FIXED:
+                day.students = self._fixed_students(d)
+            else:
+                day.students = self._id_rotation_students(d)
+            day.monitor = self._monitor(d)
+            day.assignments = self._assignments(d)
+            return day
+        finally:
+            self.config = config_backup
 
 
 _duty_manager: Optional[DutyManager] = None
