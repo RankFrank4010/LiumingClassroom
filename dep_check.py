@@ -114,10 +114,39 @@ def _dx_ok() -> bool:
     return can_load('d3dcompiler_47') or bool(find_dll('d3dcompiler_47'))
 
 
+def _sp1_ok() -> bool:
+    """Windows 7 必须是 SP1（build >= 7601）。"""
+    info = windows_info()
+    return True if not info['is_win7'] else info['build'] >= 7601
+
+
+def _kb2533623_ok() -> bool:
+    """KB2533623 提供 AddDllDirectory/SetDefaultDllDirectories（Python 3.8 与 Qt 需要）。"""
+    if os.name != 'nt':
+        return True
+    try:
+        getattr(ctypes.windll.kernel32, 'AddDllDirectory')
+        return True
+    except Exception:
+        return False
+
+
 def check_runtime() -> dict:
     """检测运行所需依赖，返回报告 dict。"""
     info = windows_info()
     components = [
+        {
+            'id': 'sp1',
+            'name': 'Windows 7 Service Pack 1',
+            'ok': _sp1_ok(),
+            'auto': False,
+        },
+        {
+            'id': 'kb2533623',
+            'name': 'Windows 7 更新 KB2533623（DLL 目录支持）',
+            'ok': _kb2533623_ok(),
+            'auto': False,
+        },
         {
             'id': 'vcredist',
             'name': 'Microsoft Visual C++ 2015-2022 运行库',

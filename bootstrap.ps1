@@ -19,6 +19,15 @@ elseif ($os.Major -eq 10) { $verName = 'Windows 10' }
 else { $verName = "Windows $($os.Major).$($os.Minor)" }
 Write-Host "OS: $verName (Build $($os.Build)) $arch"
 
+if ($os.Major -lt 6) {
+    Write-Host 'Unsupported Windows version: requires Windows 7 SP1 or later.'
+    exit 2
+}
+if ($os.Major -eq 6 -and $os.Minor -eq 1 -and $os.Build -lt 7601) {
+    Write-Host 'Windows 7 must be Service Pack 1 (build 7601). Please install Windows 7 SP1 first.'
+    exit 3
+}
+
 function Test-Dll([string]$name) {
     $paths = @(
         (Join-Path $root $name),
@@ -58,6 +67,26 @@ if ($needVc) {
             Start-Process -FilePath $out -ArgumentList '/install','/quiet','/norestart' -Verb RunAs -Wait
         } catch {
             Write-Host "Auto install failed. Please install manually: $url"
+        }
+    }
+}
+
+# Windows 7: ensure Universal CRT (KB2999226); without it Python/Qt cannot start
+if ($os.Major -eq 6 -and $os.Minor -eq 1) {
+    if (-not (Test-Dll 'ucrtbase.dll')) {
+        if ($arch -eq 'x86') {
+            $u = 'https://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/Windows6.1-KB2999226-x86.msu'
+        } else {
+            $u = 'https://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/Windows6.1-KB2999226-x64.msu'
+        }
+        $outU = Join-Path $env:TEMP 'Windows6.1-KB2999226.msu'
+        Write-Host "Downloading UCRT update for Windows 7: $u"
+        try {
+            (New-Object System.Net.WebClient).DownloadFile($u, $outU)
+            Write-Host 'Installing UCRT (KB2999226); a reboot may be required...'
+            Start-Process -FilePath 'wusa.exe' -ArgumentList $outU,'/quiet','/norestart' -Verb RunAs -Wait
+        } catch {
+            Write-Host "UCRT auto install failed. Please install KB2999226 manually: $u"
         }
     }
 }
