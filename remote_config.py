@@ -20,16 +20,50 @@ import sys
 import tempfile
 import threading
 import urllib.request
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from loguru import logger
 from PyQt5.QtCore import QObject, QTimer, QUrl, pyqtSignal
 from PyQt5.QtWebSockets import QWebSocket
 
-from file import config_center
+from basic_dirs import CONFIG_HOME, CW_HOME, PLUGIN_HOME, SCHEDULE_DIR
+from file import config_center, load_from_json, save_data_to_json
 
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 DEFAULT_RECONNECT_MS = 5000
+
+WS_PATH = '/api/classroom/ws'
+PAIR_PATH = '/api/classroom/pair'
+
+
+def normalize_server_address(text: str) -> tuple[str, str] | tuple[None, None]:
+    """把用户输入的服务器地址规范化为 (ws_url, http_base)。
+
+    支持以下输入（域名或 IP，可带端口，可带协议）：
+    - ``example.com:8080`` / ``192.168.1.10``（默认按 http 处理）
+    - ``https://example.com`` / ``http://127.0.0.1:3000``
+    - ``ws://127.0.0.1:8765`` / ``wss://example.com``（也兼容旧的完整 ws 路径）
+    """
+    raw = str(text or '').strip().rstrip('/')
+    if not raw:
+        return None, None
+    scheme = 'http'
+    for prefix in ('https://', 'http://', 'wss://', 'ws://'):
+        if raw.lower().startswith(prefix):
+            scheme = {'https://': 'https', 'http://': 'http', 'wss://': 'wss', 'ws://': 'ws'}[prefix]
+            raw = raw[len(prefix):]
+            break
+    host = raw.split('/')[0]
+    if not host:
+        return None, None
+    if scheme == 'http':
+        ws_scheme = 'ws'
+    elif scheme == 'https':
+        ws_scheme = 'wss'
+    else:
+        ws_scheme = scheme
+        scheme = 'https' if scheme == 'wss' else 'http'
+    return f'{ws_scheme}://{host}{WS_PATH}', f'{scheme}://{host}{PAIR_PATH}'
 
 
 class RemoteConfigClient(QObject):
@@ -41,6 +75,8 @@ class RemoteConfigClient(QObject):
     applied = pyqtSignal(dict)
     notification = pyqtSignal(dict)
     ota_ready = pyqtSignal(str)  # 更新包已下载校验，待安装的本地路径
+    state_changed = pyqtSignal(str, str)  # (state, detail)
+    connection_error = pyqtSignal(str)  # 连接/鉴权错误信息（用于界面提示）
 
     def __init__(
         self,
@@ -59,6 +95,40 @@ class RemoteConfigClient(QObject):
         self._reconnect_timer.timeout.connect(self._connect)
         self._started = False
         self.ota_ready.connect(self._install_and_restart)
+        self.state = 'stopped'
+        self.last_error = ''
+        self._last_state_emit = None
+
+    # -- 连接状态 ---------------------------------------------------------- #
+    STATUS_TEXT = {
+        'disabled': '未启用',
+        'connecting': '连接中…',
+        'connected': '已连接（鉴权中）',
+        'authed': '已连接',
+        'disconnected': '已断开',
+        'auth_failed': '鉴权失败',
+        'error': '连接错误',
+        'stopped': '已停止',
+    }
+
+    def _set_state(self, state: str, detail: str = '') -> None:
+        self.state = state
+        if state in ('error', 'auth_failed') and detail:
+            self.last_error = detail
+        if state == 'authed':
+            self.last_error = ''
+        pair = (state, detail)
+        if pair == self._last_state_emit:
+            return
+        self._last_state_emit = pair
+        logger.debug(f'远程配置：状态 -> {state} {detail}'.rstrip())
+        self.state_changed.emit(state, detail)
+
+    def status_text(self) -> str:
+        base = self.STATUS_TEXT.get(self.state, self.state)
+        if self.state in ('error', 'auth_failed', 'disconnected') and self.last_error:
+            return f'{base}：{self.last_error}'
+        return base
 
     # -- 生命周期 ---------------------------------------------------------- #
     def start(self) -> None:
@@ -66,11 +136,15 @@ class RemoteConfigClient(QObject):
             return
         if not self._enabled():
             logger.info('远程配置未启用（Remote.enabled=0），跳过连接')
+            self._set_state('disabled', '未启用远程配置')
             return
         if not self._url():
             logger.warning('远程配置已启用，但未配置 Remote.url，跳过连接')
+            self._set_state('error', '已启用，但未配置服务器地址')
+            self.connection_error.emit('已启用远程配置，但未配置服务器地址')
             return
         self._started = True
+        self._set_state('connecting', self._url())
         self._connect()
 
     def stop(self) -> None:
@@ -80,6 +154,7 @@ class RemoteConfigClient(QObject):
             self._ws.close()
         except Exception:  # noqa: S110 - 关闭失败无需处理
             pass
+        self._set_state('stopped', '已停止')
 
     # -- 配置读取 ---------------------------------------------------------- #
     def _enabled(self) -> bool:
@@ -104,11 +179,13 @@ class RemoteConfigClient(QObject):
         if not url:
             return
         logger.info(f'远程配置：正在连接 {url}')
+        self._set_state('connecting', url)
         self._ws.open(QUrl(url))
 
     # -- 事件 -------------------------------------------------------------- #
     def _on_connected(self) -> None:
         logger.success('远程配置：已连接到服务端')
+        self._set_state('connected', '已连接，正在鉴权…')
         self.send(
             {
                 'type': 'hello',
@@ -121,12 +198,17 @@ class RemoteConfigClient(QObject):
 
     def _on_disconnected(self) -> None:
         logger.warning('远程配置：与服务端断开连接')
+        detail = self.last_error or ('连接已断开，等待重连…' if self._auto_reconnect() else '连接已断开')
+        self._set_state('disconnected', detail)
         self.disconnected.emit()
         if self._started and self._auto_reconnect():
             self._reconnect_timer.start(self._reconnect_delay_ms())
 
     def _on_error(self, _error: Any) -> None:
-        logger.error(f'远程配置：WebSocket 错误：{self._ws.errorString()}')
+        detail = self._ws.errorString() or 'WebSocket 连接错误'
+        logger.error(f'远程配置：WebSocket 错误：{detail}')
+        self._set_state('error', detail)
+        self.connection_error.emit(detail)
 
     def _on_text_message(self, message: str) -> None:
         try:
@@ -151,9 +233,12 @@ class RemoteConfigClient(QObject):
         if action == 'auth':
             if data.get('ok', True):
                 logger.success('远程配置：鉴权通过')
+                self._set_state('authed', '已连接并鉴权通过')
             else:
                 reason = str(data.get('error', '鉴权失败'))
                 logger.error(f'远程配置：{reason}')
+                self._set_state('auth_failed', reason)
+                self.connection_error.emit(f'鉴权失败：{reason}')
                 self.auth_failed.emit(reason)
                 self.stop()
             return
@@ -248,10 +333,229 @@ class RemoteConfigClient(QObject):
             self._reload()
             return {'ok': True}
 
+        if action == 'snapshot':
+            return self._handle_snapshot(data)
+
+        if action == 'apply':
+            return self._handle_apply(data)
+
         if action == 'ota':
             return self._handle_ota(data)
 
         return {'ok': False, 'error': f'未知 action: {action}'}
+
+    # -- 全量快照 / 批量应用（协议 v2）------------------------------------- #
+
+    @staticmethod
+    def _read_json_file(path: Any, default: Any = None) -> Any:
+        try:
+            with open(path, encoding='utf-8') as file:
+                return json.load(file)
+        except Exception:
+            return default
+
+    @staticmethod
+    def _write_json_file(path: Any, payload: Any) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as file:
+            json.dump(payload, file, ensure_ascii=False, indent=4)
+
+    @staticmethod
+    def _safe_schedule_name(name: Any) -> bool:
+        text = str(name or '')
+        return (
+            bool(text)
+            and text.endswith('.json')
+            and text != 'backup.json'
+            and '/' not in text
+            and '\\' not in text
+            and len(text) <= 200
+        )
+
+    def _handle_snapshot(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """回传本机全部可远程管理的文档（config 节 / 全部课表 / 值日生 / 学科库 / 小组件 / 插件）。"""
+        import list_ as list_mod
+
+        # 配置节（排除 Remote，避免自断连）
+        sections = set(config_center.config.sections()) | set(config_center.default_data.keys())
+        config: Dict[str, Any] = {}
+        for section in sorted(sections):
+            if section == 'Remote':
+                continue
+            try:
+                config[section] = config_center.read_conf(section)
+            except Exception as e:
+                logger.warning(f'远程配置：读取配置节 {section} 失败：{e}')
+
+        # 课表文件
+        schedules: Dict[str, Any] = {}
+        try:
+            names = list_mod.get_schedule_config()
+        except Exception:
+            names = []
+        for name in names:
+            try:
+                content = load_from_json(name)
+                if content:
+                    schedules[name] = content
+            except Exception as e:
+                logger.warning(f'远程配置：读取课表 {name} 失败：{e}')
+
+        # 值日生
+        try:
+            from duty import config_to_dict, get_duty_manager
+
+            duty = config_to_dict(get_duty_manager().config)
+        except Exception as e:
+            logger.warning(f'远程配置：读取值日生失败：{e}')
+            duty = None
+
+        # 学科库
+        subjects = self._read_json_file(CW_HOME / 'data' / 'subject.json')
+
+        # 小组件
+        try:
+            widgets = list_mod.get_widget_config()
+        except Exception:
+            widgets = []
+
+        # 插件（启用 / 已装）
+        plugin_conf = self._read_json_file(CONFIG_HOME / 'plugin.json', {}) or {}
+        installed_raw = self._read_json_file(PLUGIN_HOME / 'plugins_from_pp.json', {}) or {}
+        installed: List[str] = []
+        for item in (installed_raw.get('plugins') or []):
+            if isinstance(item, dict):
+                installed.append(str(item.get('name') or item.get('id') or ''))
+            else:
+                installed.append(str(item))
+        plugins = {
+            'enabled': [str(x) for x in (plugin_conf.get('enabled_plugins') or [])],
+            'installed': [x for x in installed if x],
+        }
+
+        return {
+            'ok': True,
+            'data': {
+                'config': config,
+                'schedules': schedules,
+                'active_schedule': config_center.read_conf('General', 'schedule'),
+                'duty': duty,
+                'subjects': subjects,
+                'widgets': widgets,
+                'plugins': plugins,
+                'client_version': config_center.read_conf('Version', 'version'),
+            },
+        }
+
+    def _handle_apply(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """批量落盘 bundle 并热重载（覆盖一切配置，含课表本体）。"""
+        from data_model import Schedule, normalize_schedule_data
+
+        bundle = request.get('bundle') or {}
+        delete_schedules = request.get('delete_schedules') or []
+        applied: List[str] = []
+        failed: List[str] = []
+
+        # 1) 配置节
+        for section, key_values in (bundle.get('config') or {}).items():
+            if section == 'Remote' or not isinstance(key_values, dict):
+                continue
+            for key, value in key_values.items():
+                if config_center.write_conf(section, key, value, source='remote'):
+                    applied.append(f'config.{section}.{key}')
+                else:
+                    failed.append(f'config.{section}.{key}')
+
+        # 2) 课表文件（写入并规范化校验）
+        for name, content in (bundle.get('schedules') or {}).items():
+            if not self._safe_schedule_name(name):
+                failed.append(f'schedule:{name}')
+                continue
+            try:
+                normalized = normalize_schedule_data(dict(content))
+                Schedule.model_validate(normalized)
+                save_data_to_json(normalized, name)
+                applied.append(f'schedule:{name}')
+            except Exception as e:
+                logger.error(f'远程配置：写入课表 {name} 失败：{e}')
+                failed.append(f'schedule:{name}')
+
+        # 3) 删除课表文件（跳过当前活动课表）
+        active_now = config_center.read_conf('General', 'schedule')
+        for name in delete_schedules:
+            if not self._safe_schedule_name(name) or name == active_now:
+                continue
+            try:
+                (SCHEDULE_DIR / name).unlink()
+                applied.append(f'delete:{name}')
+            except FileNotFoundError:
+                pass
+            except Exception as e:
+                logger.error(f'远程配置：删除课表 {name} 失败：{e}')
+                failed.append(f'delete:{name}')
+
+        # 4) 切换当前课表
+        active = bundle.get('active_schedule')
+        if active is not None:
+            if self._safe_schedule_name(active) and (SCHEDULE_DIR / active).exists():
+                config_center.write_conf('General', 'schedule', active, source='remote')
+                applied.append('active_schedule')
+            else:
+                failed.append('active_schedule')
+
+        # 5) 值日生
+        if bundle.get('duty') is not None:
+            try:
+                from duty import config_from_dict, get_duty_manager
+
+                manager = get_duty_manager()
+                manager.config = config_from_dict(bundle['duty'])
+                manager.save()
+                applied.append('duty')
+            except Exception as e:
+                logger.error(f'远程配置：写入值日生失败：{e}')
+                failed.append('duty')
+
+        # 6) 学科库
+        if bundle.get('subjects') is not None:
+            try:
+                self._write_json_file(CW_HOME / 'data' / 'subject.json', bundle['subjects'])
+                applied.append('subjects')
+            except Exception as e:
+                logger.error(f'远程配置：写入学科库失败：{e}')
+                failed.append('subjects')
+
+        # 7) 小组件
+        if bundle.get('widgets') is not None:
+            try:
+                from conf import save_widget_conf_to_json
+
+                save_widget_conf_to_json({'widgets': [str(x) for x in bundle['widgets']]})
+                applied.append('widgets')
+            except Exception as e:
+                logger.error(f'远程配置：写入小组件失败：{e}')
+                failed.append('widgets')
+
+        # 8) 插件启用
+        plugins = bundle.get('plugins')
+        if isinstance(plugins, dict) and 'enabled' in plugins:
+            try:
+                from conf import save_plugin_config
+
+                save_plugin_config({'enabled_plugins': [str(x) for x in (plugins.get('enabled') or [])]})
+                applied.append('plugins')
+            except Exception as e:
+                logger.error(f'远程配置：写入插件配置失败：{e}')
+                failed.append('plugins')
+
+        # 9) 热重载（apply_remote_reload 会重读配置、值日生、课表、小组件）
+        self._reload()
+
+        return {
+            'ok': not failed,
+            'data': {'applied': applied, 'failed': failed},
+            'error': ('写入失败: ' + ', '.join(failed)) if failed else None,
+        }
 
     def _reply(self, msg_id: Any, ok: bool, data: Any = None, error: Any = None) -> None:
         if msg_id is None:

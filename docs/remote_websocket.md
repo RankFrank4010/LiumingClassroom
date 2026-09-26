@@ -176,3 +176,75 @@
 
 （`config.ini` 的 `[Remote]` 节由 `data/default_config.json` 提供默认值，打包时会随 `data` 一起收集。）
 
+---
+
+## 9. 协议 v2 扩展：全量快照与批量应用（云端权威）
+
+> v2 由主站（流明）作为**权威状态源**提供云端校务管理：团队中获授权成员可在网页上修改本机「一切配置」（含课表本体、值日生、学科库、小组件、插件等），并留存变更历史。
+> 客户端在 `hello` 中声明 `"protocol": 2`；服务端可据此启用下述 action。v1 客户端不受影响。
+
+### 9.1 `snapshot` — 回传全量文档
+
+请求：`{ "id": 20, "action": "snapshot" }`
+
+响应 `data`：
+
+```json
+{
+  "config": { "General": { "schedule": "新课表 - 1.json" }, "Toast": { }, "TTS": { } },
+  "schedules": { "新课表 - 1.json": { "part": {}, "part_name": {}, "timeline": {}, "timeline_even": {}, "schedule": {}, "schedule_even": {} } },
+  "active_schedule": "新课表 - 1.json",
+  "duty": { "enabled": false, "students": [], "mode": "id_rotation" },
+  "subjects": { "subject_icon": {}, "subject_abbreviation": {}, "subject_list": [] },
+  "widgets": ["widget-weather.ui", "widget-countdown.ui"],
+  "plugins": { "enabled": ["..."], "installed": ["..."] },
+  "client_version": "1.2.0"
+}
+```
+
+- `config` **不含** `Remote` 节（连接参数，避免自断连）；其余节全量。
+- `schedules` 为 `config/schedule/*.json` 中除 `backup.json` 外的全部文件。
+- `plugins.installed` 只读（来自 `plugins_from_pp.json`）。
+
+### 9.2 `apply` — 批量落盘并热重载
+
+请求：
+
+```json
+{
+  "id": 21,
+  "action": "apply",
+  "bundle": {
+    "config": { "General": { "theme": "default" } },
+    "schedules": { "新课表 - 2.json": { } },
+    "active_schedule": "新课表 - 2.json",
+    "duty": { },
+    "subjects": { },
+    "widgets": ["widget-duty.ui"],
+    "plugins": { "enabled": ["xxx"] }
+  },
+  "delete_schedules": ["旧课表.json"]
+}
+```
+
+- `bundle.config[节][键] = 值`：写 `config.ini`，`source='remote'`（可覆盖被 `lock` 的项）；`Remote` 节忽略。
+- `bundle.schedules[文件名] = 内容`：写 `config/schedule/<文件名>`。
+- `delete_schedules`：删除课表文件（当前活动课表不会被删）。
+- `bundle.active_schedule`：切换当前课表（等价写 `General.schedule`）。
+- `duty` / `subjects` / `widgets` / `plugins.enabled` 覆盖对应文件。
+- 所有字段可选，只处理出现的字段。
+
+响应：`{ "id": 21, "ok": true, "data": { "applied": ["config.General", "schedule:新课表 - 2.json", "duty"], "failed": [] } }`
+
+落盘后调用 `apply_remote_reload()` —— **v2 起该函数会同时热重载课表**（此前仅重载 `config.ini`、值日生与小组件）。
+
+### 9.3 重连对齐（权威在服务端）
+
+1. 客户端连上并发 `hello`（`protocol: 2`）→ 服务端回 `auth`。
+2. 服务端请求 `snapshot` 获取客户端现状。
+3. 逐文档按 `revision` 比对：
+   - 服务端更新 → 下发 `apply` 覆盖客户端；
+   - 客户端本地领先（疑似本地改动）→ 记入服务端留档（`action=local_override`），随后仍以服务端为准；
+   - 服务端无文档（首次接入）→ 以客户端 `snapshot` 种子化（`action=seed`）。
+4. 之后服务端的任何写入，在线时即时通过 `apply` 下发；离线则下次上线自动对齐。
+
