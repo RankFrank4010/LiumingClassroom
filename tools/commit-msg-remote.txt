@@ -1,5 +1,0 @@
-feat(remote): 远程配置增强与品牌图标、触摸适配设置组件
-
-- remote_config/remote_settings 与文档同步更新
-- 图标由 liumingclassroom-icon-light.svg 全量再生成
-- 新增 settings_widgets 通用设置组件（触屏友好）

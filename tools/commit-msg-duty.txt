@@ -1,9 +1,0 @@
-feat(duty): 值日改班/回滚、休学用户与优先补值、PPT 全屏隐藏与上课横幅
-
-- duty: 改班记录(DayAdjustment)、值日班长顺延规则、缺值日优先补值、休学用户跳过排班与当日补值、节假日感知(holiday.py)
-- 值日小组件右键新增「值日改班」：点击划掉/恢复、补栏补值、应用立即生效、一键回滚
-- PPT(PowerPoint/WPS)放映全屏时隐藏小组件与所有事件提示，退出立即恢复
-- 上课时用 26px 一行横幅替代小组件尾巴（时间/日期/周几/当前课/下一节课，点击穿透）
-- tip_toast/duty_prompt 通过 display_state 在全屏期间屏蔽事件显示
-- 值日查看器表格增加 QScroller 触摸滑动适配
-- 附值日改班逻辑回归测试 test_duty_adjust_logic.py
