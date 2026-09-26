@@ -623,7 +623,7 @@ jobs:
           dpkg-deb -b deb packages/cn.rankfrank.liumingclassroom_${RELEASE_VERSION}_amd64.deb
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.platform }}-build
           path: ./packages
@@ -646,7 +646,7 @@ jobs:
       - name: Upload unsigned artifact (Windows)
         if: startsWith(matrix.os, 'windows') && env.IS_SIGNING == 'true'
         id: upload_unsigned
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: windows-${{ matrix.arch }}-exe-unsigned
           path: ./exe-for-signing
@@ -694,7 +694,7 @@ jobs:
 
       - name: Upload signed build package (Windows)
         if: startsWith(matrix.os, 'windows') && env.IS_SIGNING == 'true'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: windows-${{ matrix.arch }}-build-signed
           path: packages/LiumingClassroom-Windows-${{ matrix.arch }}-signed.zip
@@ -879,14 +879,14 @@ jobs:
           ls -la final-packages/ || true
 
       - name: Upload final packages
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: LiumingClassroom-Packages
           path: final-packages
 
       - name: Upload provenance artifacts
         if: ${{ env.BUILD_TYPE == 'Release' && steps.generate-provenance.outputs.bundle-path != '' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: provenance
           path: |
