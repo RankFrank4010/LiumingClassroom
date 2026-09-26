@@ -14,8 +14,10 @@ plugins/
 # Distribution / packaging
 .Python
 build/
+build32/
 develop-eggs/
 dist/
+dist32/
 downloads/
 eggs/
 .eggs/
@@ -129,6 +131,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv32
 env/
 venv/
 ENV/
@@ -186,3 +189,6 @@ cython_debug/
 # Visual Studio
 /.vs
 /.vscode
+
+# Agent workspace
+.omo/

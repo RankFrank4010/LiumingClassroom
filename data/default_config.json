@@ -27,7 +27,8 @@
     "attend_class": "1",
     "finish_class": "1",
     "prepare_class": "1",
-    "after_school": "1"
+    "after_school": "1",
+    "time_announce": "0"
   },
   "TTS": {
     "enable": "0",
@@ -39,7 +40,8 @@
     "finish_class": "活动结束, 下一节课 {lesson_name}",
     "prepare_class": "活动即将开始, 下一节课 {lesson_name}",
     "after_school": "活动全部结束",
-    "otherwise": ""
+    "otherwise": "",
+    "time_announce": "现在是 {time}"
   },
   "Weather": {
     "city": "0",
@@ -92,13 +94,14 @@
   "Version": {
     "version": "__BUILD_VERSION__",
     "version_channel": "__BUILD_CHANNEL__",
-    "auto_check_update": "1",
-    "cses_version": "1",
-    "build_time": "__BUILD_TIME__",
-    "build_commit": "__BUILD_COMMIT__",
-    "build_branch": "__BUILD_BRANCH__",
-    "build_runid": "__BUILD_RUNID__",
-    "build_type": "__BUILD_TYPE__"
+    "cses_version": "1"
+  },
+  "Remote": {
+    "enabled": "0",
+    "url": "",
+    "token": "",
+    "auto_reconnect": "1",
+    "reconnect_interval": "5"
   },
   "Other": {
     "do_not_log": "0",

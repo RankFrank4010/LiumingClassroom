@@ -26,8 +26,8 @@ proxies = {"http": "http://127.0.0.1:10809", "https": "http://127.0.0.1:10809"} 
 proxies = {"http": None, "https": None}
 
 MIRROR_PATH = CW_HOME / "data" / "mirror.json"
-PLAZA_REPO_URL = "https://raw.githubusercontent.com/Class-Widgets/plugin-plaza/"
-PLAZA_REPO_DIR = "https://api.github.com/repos/Class-Widgets/plugin-plaza/contents/"
+PLAZA_REPO_URL = "https://raw.githubusercontent.com/rankfrank4010/plugin-plaza/"
+PLAZA_REPO_DIR = "https://api.github.com/repos/rankfrank4010/plugin-plaza/contents/"
 threads = []
 
 # 读取镜像配置
@@ -53,7 +53,7 @@ class getRepoFileList(QThread):  # 获取仓库文件目录
 
     def __init__(
         self,
-        url: str = 'https://raw.githubusercontent.com/Class-Widgets/plugin-plaza/main/Banner/banner.json',
+        url: str = 'https://raw.githubusercontent.com/rankfrank4010/plugin-plaza/main/Banner/banner.json',
     ) -> None:
         super().__init__()
         self.download_url = url
@@ -84,7 +84,7 @@ class getPluginInfo(QThread):  # 获取插件信息(json)
 
     def __init__(
         self,
-        url: str = 'https://raw.githubusercontent.com/Class-Widgets/plugin-plaza/main/Plugins/plugin_list.json',
+        url: str = 'https://raw.githubusercontent.com/rankfrank4010/plugin-plaza/main/Plugins/plugin_list.json',
     ) -> None:
         super().__init__()
         self.download_url = url
@@ -115,7 +115,7 @@ class getTags(QThread):  # 获取插件标签(json)
 
     def __init__(
         self,
-        url: str = 'https://raw.githubusercontent.com/Class-Widgets/plugin-plaza/main/Plugins/plaza_detail.json',
+        url: str = 'https://raw.githubusercontent.com/rankfrank4010/plugin-plaza/main/Plugins/plaza_detail.json',
     ) -> None:
         super().__init__()
         self.download_url = url
@@ -146,7 +146,7 @@ class getImg(QThread):  # 获取图片
 
     def __init__(
         self,
-        url: str = 'https://raw.githubusercontent.com/Class-Widgets/plugin-plaza/main/Banner/banner_1.png',
+        url: str = 'https://raw.githubusercontent.com/rankfrank4010/plugin-plaza/main/Banner/banner_1.png',
     ) -> None:
         super().__init__()
         self.download_url = url
@@ -183,7 +183,7 @@ class getReadme(QThread):  # 获取README
 
     def __init__(
         self,
-        url: str = 'https://raw.githubusercontent.com/Class-Widgets/Class-Widgets/main/README.md',
+        url: str = 'https://raw.githubusercontent.com/rankfrank4010/liumingclassroom/main/README.md',
     ) -> None:
         super().__init__()
         self.download_url = url
@@ -383,39 +383,6 @@ class getCity(QThread):
             raise ValueError(f"获取城市失败: {e}")
 
 
-class VersionThread(QThread):  # 获取最新版本号
-    version_signal = pyqtSignal(dict)
-    _instance_running = False
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def run(self) -> None:
-        version = self.get_latest_version()
-        self.version_signal.emit(version)
-
-    @classmethod
-    def is_running(cls) -> bool:
-        return cls._instance_running
-
-    @staticmethod
-    def get_latest_version() -> Dict[str, Any]:
-        url = "https://classwidgets.rinlit.cn/version.json"
-        try:
-            logger.info("正在获取版本信息")
-            response = requests.get(url, proxies=proxies, timeout=30)
-            logger.debug(f"更新请求响应: {response.status_code}")
-            if response.status_code == 200:
-                return response.json()
-            logger.error(
-                f"无法获取版本信息 错误代码：{response.status_code}，响应内容: {response.text}"
-            )
-            return {'error': f"请求失败，错误代码：{response.status_code}"}
-        except requests.exceptions.RequestException as e:
-            logger.error(f"请求失败，错误详情：{e!s}")
-            return {"error": f"请求失败\n{e!s}"}
-
-
 class getDownloadUrl(QThread):
     # 定义信号，通知下载进度或完成
     geturl_signal = pyqtSignal(str)
@@ -547,50 +514,6 @@ class DownloadAndExtract(QThread):  # 下载并解压插件
             logger.error(f"解压失败: {e}")
 
 
-def check_update() -> None:
-    global threads
-
-    if VersionThread.is_running():
-        logger.debug("已存在版本检查线程在运行，跳过本检查")
-        return
-
-    # 清理已终止的线程
-    threads = [t for t in threads if t.isRunning()]
-
-    # 创建新的版本检查线程
-    version_thread = VersionThread()
-    threads.append(version_thread)
-    version_thread.version_signal.connect(check_version)
-    version_thread.start()
-
-
-def check_version(version: Dict[str, Any]) -> bool:  # 检查更新
-    global threads
-    for thread in threads:
-        thread.terminate()
-    threads = []
-    if 'error' in version:
-        utils.tray_icon.push_error_notification(
-            "检查更新失败！", f"检查更新失败！\n{version['error']}"
-        )
-        return False
-
-    channel = int(
-        '1'
-        if (channel := config_center.read_conf("Version", "version_channel")) not in ['0', '1']
-        else channel
-    )
-    server_version = version['version_release' if channel == 0 else 'version_beta']
-    local_version = config_center.read_conf("Version", "version")
-    if local_version != "__BUILD_VERSION__":
-        logger.debug(f"服务端版本: {server_version}，本地版本: {local_version}")
-        if Version(server_version.replace('-nightly', '')) > Version(
-            local_version.replace('-nightly', '')
-        ):
-            utils.tray_icon.push_update_notification(
-                f"新版本速递：{server_version}\n请在“设置”中了解更多。"
-            )
-    return None
 
 
 class scheduleThread(QThread):  # 获取课表

@@ -2,15 +2,15 @@
 <a href="/.github/CONTRIBUTING.md">简体中文</a> | <a href="/docs/contributing/CONTRIBUTING.en_US.md">English</a> | 日本語
 </div>
 
-# `Class Widgets` への貢献
+# `LiumingClassroom` への貢献
 
 ## フィードバック
 
 ### バグのフィードバック
 
-Class Widgets の使用中に問題が発生した場合は、Issues でバグフィードバックを提出できます。提出前に以下の確認を行ってください：
+LiumingClassroom の使用中に問題が発生した場合は、Issues でバグフィードバックを提出できます。提出前に以下の確認を行ってください：
 
-- 問題が [最新リリースバージョン](https://github.com/Class-Widgets/Class-Widgets/releases/latest) および [メインブランチの最新コミット](https://github.com/Class-Widgets/Class-Widgets/commits) で修正されていないことを確認する；
+- 問題が [最新リリースバージョン](https://github.com/rankfrank4010/liumingclassroom/releases/latest) および [メインブランチの最新コミット](https://github.com/rankfrank4010/liumingclassroom/commits) で修正されていないことを確認する；
 - 同じまたは類似の Issue が既に存在していないことを確認する（キーワード検索で確認可能）。
 
 バグフィードバックに含める必要がある情報：
@@ -98,9 +98,8 @@ Class Widgets の使用中に問題が発生した場合は、Issues でバグ�
 
 ## 翻訳の貢献
 
-Class Widgets は多言語国際化（i18n）をサポートしており、以下の方法で翻訳を貢献できます：
+LiumingClassroom は多言語国際化（i18n）をサポートしており、以下の方法で翻訳を貢献できます：
 
-1. プロジェクトの [Weblate 翻訳プラットフォーム](https://hosted.weblate.org/engage/class-widgets-1/) にアクセスする；
 2. 対象言語を選択し、翻訳が完了していない用語を翻訳する；
 3. 翻訳はソフトウェアのコンテキストに合致し、用語の一貫性を保持する必要があります（付録「機能対照表」を参照）。
 

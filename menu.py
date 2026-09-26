@@ -105,6 +105,8 @@ import conf
 import i18n_manager
 import list_
 import tip_toast
+from duty_settings import DutySettingsPage
+from remote_settings import RemoteSettingsPage
 import utils
 import weather as wd
 from basic_dirs import CONFIG_HOME, CW_HOME, PLUGIN_HOME, SCHEDULE_DIR, THEME_HOME
@@ -118,7 +120,7 @@ from generate_speech import (
     get_tts_service,
     get_voice_name_by_id_sync,
 )
-from network_thread import VersionThread, getCity, scheduleThread
+from network_thread import getCity, scheduleThread
 from plugin import p_loader
 from plugin_plaza import PluginPlaza
 
@@ -429,7 +431,7 @@ def open_dir(path: str):
             QCoreApplication.translate('menu', '无法打开文件夹'),
             QCoreApplication.translate(
                 'menu',
-                'Class Widgets 在您的系统下不支持自动打开文件夹，请手动打开以下地址：\n{path}',
+                'LiumingClassroom 在您的系统下不支持自动打开文件夹，请手动打开以下地址：\n{path}',
             ).format(path=path),
         )
         msg_box.yesButton.setText(QCoreApplication.translate('menu', '好'))
@@ -791,7 +793,7 @@ class licenseDialog(MessageBoxBase):  # 显示软件许可协议
         title_label.setText(QCoreApplication.translate('menu', '软件许可协议'))
         subtitle_label.setText(
             QCoreApplication.translate(
-                'menu', '此项目 (Class Widgets) 基于 GPL-3.0 许可证授权发布，详情请参阅：'
+                'menu', '此项目 (LiumingClassroom) 基于 GPL-3.0 许可证授权发布，详情请参阅：'
             )
         )
         self.yesButton.setText(QCoreApplication.translate('menu', '好'))  # 按钮组件汉化
@@ -1021,7 +1023,7 @@ class PluginCard(CardWidget):  # 插件卡片
                 InfoBar.success(
                     title=QCoreApplication.translate('menu', '卸载成功'),
                     content=QCoreApplication.translate(
-                        'menu', '插件 “{title}” 已卸载。请重启 Class Widgets 以完全移除。'
+                        'menu', '插件 “{title}” 已卸载。请重启 LiumingClassroom 以完全移除。'
                     ).format(title=self.title),
                     orient=Qt.Horizontal,
                     isClosable=True,
@@ -1254,10 +1256,9 @@ class SettingsMenu(FluentWindow):
         self.plInterface.setObjectName("plInterface")
         self.wtInterface = uic.loadUi(str(CW_HOME / 'view/menu/weather.ui'))  # 天气
         self.wtInterface.setObjectName("wtInterface")
+        self.dutyInterface = DutySettingsPage()  # 值日生
+        self.remoteInterface = RemoteSettingsPage()  # 远程配置
         self.version_number_label = self.ifInterface.findChild(QLabel, 'version_number_label')
-        self.build_commit_label = self.ifInterface.findChild(QLabel, 'build_commit_label')
-        self.build_uuid_label = self.ifInterface.findChild(QLabel, 'build_uuid_label')
-        self.build_date_label = self.ifInterface.findChild(QLabel, 'build_date_label')
 
         # 向后兼容
         global global_i18n_manager
@@ -1292,6 +1293,7 @@ class SettingsMenu(FluentWindow):
         self.setup_customization_interface()
         self.setup_configs_interface()
         self.setup_sound_interface()
+        self.dutyInterface.load_config()
         self.setup_help_interface()
         self.setup_plugin_mgr_interface()
         self.setup_countdown_edit()
@@ -2256,7 +2258,7 @@ class SettingsMenu(FluentWindow):
         open_by_browser.setIcon(fIcon.LINK)
         open_by_browser.clicked.connect(
             lambda: QDesktopServices.openUrl(
-                QUrl(self.tr('https://classwidgets.rinlit.cn/docs-user/'))
+                QUrl(self.tr('https://liumingclassroom.rinlit.cn/docs-user/'))
             )
         )
 
@@ -2348,6 +2350,12 @@ class SettingsMenu(FluentWindow):
         switch_wave_effect.checkedChanged.connect(
             lambda checked: switch_checked('Toast', 'wave', checked)
         )  # 波纹开关
+
+        switch_time_announce = self.findChild(SwitchButton, 'switch_enable_time_announce')
+        switch_time_announce.setChecked(int(config_center.read_conf('Toast', 'time_announce', '0')))
+        switch_time_announce.checkedChanged.connect(
+            lambda checked: switch_checked('Toast', 'time_announce', checked)
+        )  # 每15分钟报时开关
 
         spin_prepare_time = self.findChild(SpinBox, 'spin_prepare_class')
         spin_prepare_time.setValue(int(config_center.read_conf('Toast', 'prepare_minutes')))
@@ -3269,68 +3277,16 @@ class SettingsMenu(FluentWindow):
 
         self.version = self.findChild(BodyLabel, 'version')
 
-        check_update_btn = self.findChild(PrimaryPushButton, 'check_update')
-        check_update_btn.setIcon(fIcon.SYNC)
-        check_update_btn.clicked.connect(self.check_update)
-
-        self.auto_check_update = self.ifInterface.findChild(SwitchButton, 'auto_check_update')
-        self.auto_check_update.setChecked(
-            int(config_center.read_conf("Version", "auto_check_update", "1"))
-        )
-        self.auto_check_update.checkedChanged.connect(
-            lambda checked: switch_checked("Version", "auto_check_update", checked)
-        )  # 自动检查更新
-
-        self.version_channel = self.findChild(ComboBox, 'version_channel')
-        self.version_channel.addItems(list_.version_channel)
-        self.version_channel.setCurrentIndex(
-            int(
-                '1'
-                if (channel := config_center.read_conf("Version", "version_channel"))
-                not in ['0', '1']
-                else channel
-            )
-        )
-        self.version_channel.currentIndexChanged.connect(
-            lambda: config_center.write_conf(
-                "Version", "version_channel", self.version_channel.currentIndex()
-            )
-        )  # 版本更新通道
-
         github_page = self.findChild(PushButton, "button_github")
         github_page.clicked.connect(
             lambda: QDesktopServices.openUrl(
-                QUrl(self.tr('https://github.com/RinLit-233-shiroko/Class-Widgets'))
-            )
-        )
-
-        bilibili_page = self.findChild(PushButton, 'button_bilibili')
-        bilibili_page.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl(self.tr('https://space.bilibili.com/569522843')))
-        )
-
-        weblate_page = self.findChild(PushButton, 'button_weblate')
-        weblate_page.clicked.connect(
-            lambda: QDesktopServices.openUrl(
-                QUrl('https://hosted.weblate.org/engage/class-widgets-1')
+                QUrl(self.tr('https://github.com/rankfrank4010/liumingclassroom'))
             )
         )
 
         license_button = self.findChild(PushButton, 'button_show_license')
         license_button.clicked.connect(self.show_license)
 
-        thanks_button = self.findChild(PushButton, 'button_thanks')
-        thanks_button.clicked.connect(
-            lambda: QDesktopServices.openUrl(
-                QUrl(
-                    self.tr(
-                        'https://github.com/RinLit-233-shiroko/Class-Widgets?tab=readme-ov-file#致谢'
-                    )
-                )
-            )
-        )
-
-        self.check_update()
 
     def setup_advance_interface(self):
         adv_scroll = self.adInterface.findChild(SmoothScrollArea, 'adv_scroll')  # 触摸屏适配
@@ -4796,11 +4752,6 @@ class SettingsMenu(FluentWindow):
                     return 0
         return None
 
-    def check_update(self):
-        self.version_thread = VersionThread()
-        self.version_thread.version_signal.connect(self.check_version)
-        self.version_thread.start()
-
     def check_version(self, version):  # 检查更新
         if 'error' in version:
             self.version_number_label.setText(self.tr('版本号：获取失败！'))
@@ -4819,21 +4770,6 @@ class SettingsMenu(FluentWindow):
         )
         new_version = version['version_release' if channel == 0 else 'version_beta']
         local_version = config_center.read_conf("Version", "version") or "0.0.0"
-        build_commit = config_center.read_conf("Version", "build_commit")
-        build_branch = config_center.read_conf("Version", "build_branch")
-        build_runid = config_center.read_conf("Version", "build_runid")
-        build_type = config_center.read_conf("Version", "build_type")
-        build_time = config_center.read_conf("Version", "build_time")
-
-        self.build_commit_label.setText(
-            f'{build_commit if build_commit != "__BUILD_COMMIT__" else "Debug"}({build_branch if build_branch != "__BUILD_BRANCH__" else "Debug"})'
-        )
-        self.build_uuid_label.setText(
-            f'{build_runid if build_runid != "__BUILD_RUNID__" else "Debug"} - {build_type if build_type != "__BUILD_TYPE__" else "Debug"}'
-        )
-        self.build_date_label.setText(
-            f'{build_time if build_time != "__BUILD_TIME__" else "Debug"}'
-        )
         if local_version != "__BUILD_VERSION__":
             logger.debug(f"服务端版本: {new_version}，本地版本: {local_version}")
             if Version(new_version.replace('-nightly', '')) <= Version(
@@ -4981,7 +4917,7 @@ class SettingsMenu(FluentWindow):
                 self.show_tip_flyout(
                     self.tr('导入失败！'),
                     '课程表文件导入失败！\n'
-                    '可能为格式错误或文件损坏，请检查此文件是否为 Class Widgets 课程表文件。\n'
+                    '可能为格式错误或文件损坏，请检查此文件是否为 LiumingClassroom 课程表文件。\n'
                     '详情请查看Log日志，日志位于./log/下。\n'
                     '注意: 尚不支持 json 格式的 CSES 课表导入',
                     self.import_from_file,
@@ -6194,6 +6130,18 @@ class SettingsMenu(FluentWindow):
             self.wtInterface, fIcon.CLOUD, self.tr('天气'), NavigationItemPosition.BOTTOM
         )
         self.addSubInterface(
+            self.dutyInterface,
+            getattr(fIcon, 'PEOPLE', fIcon.EDUCATION),
+            self.tr('值日生'),
+            NavigationItemPosition.BOTTOM,
+        )
+        self.addSubInterface(
+            self.remoteInterface,
+            getattr(fIcon, 'GLOBE', fIcon.CLOUD),
+            self.tr('远程配置'),
+            NavigationItemPosition.BOTTOM,
+        )
+        self.addSubInterface(
             self.ctInterface, fIcon.BRUSH, self.tr('自定义'), NavigationItemPosition.BOTTOM
         )
         self.addSubInterface(
@@ -6234,7 +6182,7 @@ class SettingsMenu(FluentWindow):
         self.move(int(screen_width / 2 - width / 2), 150)
         self.resize(width, height)
 
-        self.setWindowTitle(self.tr('Class Widgets - 设置'))
+        self.setWindowTitle(self.tr('LiumingClassroom - 设置'))
         self.setWindowIcon(QIcon(str(CW_HOME / 'img' / 'logo' / 'favicon-settings.ico')))
 
         self.init_font()  # 设置字体

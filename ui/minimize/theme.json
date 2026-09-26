@@ -13,6 +13,8 @@
     "widget-current-activity.ui": 290,
     "widget-next-activity.ui": 240,
     "widget-countdown-day.ui": 180,
-    "widget-weather.ui": 180
+    "widget-weather.ui": 180,
+    "widget-clock.ui": 180,
+    "widget-duty.ui": 180
   }
 }

@@ -95,7 +95,7 @@ from file import config_center, schedule_center
 from generate_speech import generate_speech_sync
 from i18n_manager import app, global_i18n_manager
 from menu import open_plaza
-from network_thread import check_update, getCity
+from network_thread import getCity
 from plugin import p_loader
 from tip_toast import active_windows
 from utils import DarkModeWatcher, TimeManagerFactory, restart, stop, update_timer
@@ -125,6 +125,9 @@ last_notify_time = None
 notify_cooldown = 2  # 2秒内仅能触发一次通知(防止触发114514个通知导致爆炸
 sent_notifications = {}  # 格式: {notification_key: timestamp}
 notification_dedup_timeout = 10  # 通知去重超时时间(秒)
+last_time_announce_slot = None  # 上次报时的时间槽(YYYY-MM-DD_HH:MM)
+duty_prompted_date = None  # 已弹出值日生大提示的日期
+remote_client = None  # 远程配置 WebSocket 客户端
 
 timeline_data = []
 next_lessons = []
@@ -457,6 +460,8 @@ def get_countdown(toast: bool = False) -> Optional[Tuple[str, str, int]]:  # 重
         elif config_center.read_conf('Toast', 'after_school') == '1':
             if can_send_notification(2):
                 notification.push_notification(2)  # 放学
+        if not next_lessons:
+            duty_maybe_prompt()
 
     # 当前时间舍去毫秒，否则后面判定时间相等始终是False
     current_dt = TimeManagerFactory.get_instance().get_current_time_without_ms()
@@ -584,6 +589,156 @@ def get_countdown(toast: bool = False) -> Optional[Tuple[str, str, int]]:  # 重
     return None
 
 
+def time_announce_check() -> None:  # 每15分钟报时
+    global last_time_announce_slot
+    if config_center.read_conf('Toast', 'time_announce', '0') != '1':
+        return
+    now = TimeManagerFactory.get_instance().get_current_time()
+    if now.minute % 15 != 0:
+        return
+    slot = now.strftime('%Y-%m-%d_%H:%M')
+    if slot == last_time_announce_slot:
+        return
+    last_time_announce_slot = slot
+    notification.push_notification(5, content=now.strftime('%H:%M:%S'))
+
+
+def duty_maybe_prompt() -> None:  # 最后一节课结束时弹出值日生大提示
+    global duty_prompted_date
+    try:
+        from duty import DELIVERY_WIDGET, get_duty_manager
+
+        manager = get_duty_manager()
+        if not manager.config.enabled:
+            return
+        today_ = TimeManagerFactory.get_instance().get_today()
+        if today_.weekday() in (5, 6) and not manager.config.include_weekend:
+            return
+        if duty_prompted_date == today_:
+            return
+        day = manager.get_day(today_)
+        if not day.students and day.monitor is None:
+            return
+        duty_prompted_date = today_
+        if manager.config.prompt_delivery == DELIVERY_WIDGET:
+            # 仅“常驻小组件”送达：不弹窗，值日生小组件已长期展示大提示文案
+            return
+        from duty_prompt import show_duty_prompt
+
+        show_duty_prompt(day, manager)
+    except Exception as e:
+        logger.error(f"值日生提示触发失败: {e}")
+
+
+def _on_remote_notification(data: dict) -> None:
+    """显示服务端通过 WebSocket 推送的通知；``special`` 为特别通知（顶部横幅）。"""
+    try:
+        title = str(data.get('title', QCoreApplication.translate('main', '远程通知')))
+        content = str(data.get('content', ''))
+        duration = int(data.get('duration', 6000))
+        if bool(data.get('special', False)):
+            from qfluentwidgets import InfoBar, InfoBarPosition
+
+            parent = QApplication.activeWindow() or (windows[0] if windows else None)
+            InfoBar.warning(
+                title=title,
+                content=content or str(data.get('subtitle', '')),
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=duration,
+                parent=parent,
+            )
+            return
+        notification.push_notification(
+            int(data.get('state', 1)),
+            lesson_name=str(data.get('lesson_name', '')),
+            title=title,
+            subtitle=str(data.get('subtitle', '')),
+            content=content,
+            duration=duration,
+        )
+    except Exception as e:
+        logger.error(f"显示远程通知失败: {e}")
+
+
+def apply_remote_reload() -> None:
+    """远程配置变更后的热重载（无需重启，主题类改动可能仍需重启）。"""
+    try:
+        config_center._load_user_config()
+    except Exception as e:
+        logger.error(f"重新加载配置失败: {e}")
+    try:
+        from duty import reset_duty_manager
+
+        reset_duty_manager()
+    except Exception as e:
+        logger.error(f"重新加载值日配置失败: {e}")
+    try:
+        current_mgr = globals().get('mgr')
+        if current_mgr is not None:
+            current_mgr.update_widgets()
+    except Exception as e:
+        logger.error(f"刷新小组件失败: {e}")
+    logger.info('远程配置已热重载（主题类改动可能需要重启生效）')
+
+
+def _start_remote_client() -> None:
+    """启动远程配置 WebSocket 客户端（幂等）。"""
+    global remote_client
+    if remote_client is not None:
+        return
+    try:
+        from remote_config import RemoteConfigClient
+
+        remote_client = RemoteConfigClient(reload_callback=apply_remote_reload)
+        remote_client.notification.connect(_on_remote_notification)
+        remote_client.start()
+    except Exception as e:
+        logger.error(f"启动远程配置客户端失败: {e}")
+
+
+def _stop_remote_client() -> None:
+    global remote_client
+    if remote_client is not None:
+        try:
+            remote_client.stop()
+        except Exception as e:
+            logger.error(f"停止远程配置客户端失败: {e}")
+        remote_client = None
+
+
+def _check_runtime_on_startup() -> None:
+    """启动辅助：检测运行库依赖，缺失时提示并可自动安装（Win7 起全版本）。"""
+    if os.name != 'nt':
+        return
+    try:
+        import dep_check
+
+        report = dep_check.check_runtime()
+        if report['all_ok']:
+            logger.debug(f"运行库检测通过：{report['windows']['name']} {report['windows']['arch']}")
+            return
+        missing = '、'.join(c['name'] for c in report['components'] if not c['ok'])
+        logger.warning(f'检测到缺少运行库：{missing}')
+        from qfluentwidgets import Dialog
+
+        dlg = Dialog(
+            QCoreApplication.translate('main', '缺少运行库'),
+            QCoreApplication.translate(
+                'main',
+                '检测到缺少运行本软件所需的组件：\n{missing}\n\n是否现在自动安装？（可能弹出 UAC，安装后建议重启程序）',
+            ).format(missing=missing),
+        )
+        dlg.yesButton.setText(QCoreApplication.translate('main', '自动安装'))
+        dlg.cancelButton.setText(QCoreApplication.translate('main', '暂不安装'))
+        if dlg.exec():
+            dep_check.install_missing(report)
+            logger.info('运行库安装流程结束，建议重启程序。')
+    except Exception as e:
+        logger.error(f'运行库检测失败: {e}')
+
+
 # 获取将发生的活动
 def get_next_lessons() -> None:
     global current_lesson_name
@@ -676,7 +831,7 @@ def get_current_lesson_name() -> None:
 def get_hide_status() -> int:
     # 1 -> hide, 0 -> show
     # 满分啦（
-    # 祝所有用 Class Widgets 的、不用 Class Widgets 的学子体测满分啊（（
+    # 祝所有用 LiumingClassroom 的、不用 LiumingClassroom 的学子体测满分啊（（
     global current_state, current_lesson_name, excluded_lessons
     return (
         1
@@ -792,10 +947,10 @@ class ErrorDialog(Dialog):  # 重大错误提示框
         splash_window.error()
 
         super().__init__(
-            QCoreApplication.translate('ErrorDialog', 'Class Widgets 崩溃报告'),
+            QCoreApplication.translate('ErrorDialog', 'LiumingClassroom 崩溃报告'),
             QCoreApplication.translate(
                 'ErrorDialog',
-                '抱歉！Class Widgets 发生了严重的错误从而无法正常运行。您可以保存下方的错误信息并向他人求助。'
+                '抱歉！LiumingClassroom 发生了严重的错误从而无法正常运行。您可以保存下方的错误信息并向他人求助。'
                 '若您认为这是程序的Bug，请点击“报告此问题”或联系开发者。',
             ),
             parent,
@@ -842,7 +997,7 @@ class ErrorDialog(Dialog):  # 重大错误提示框
         self.report_problem.clicked.connect(
             lambda: QDesktopServices.openUrl(
                 QUrl(
-                    'https://github.com/Class-Widgets/Class-Widgets/issues/'
+                    'https://github.com/rankfrank4010/liumingclassroom/issues/'
                     'new?assignees=&labels=Bug&projects=&template=BugReport.yml&title=[Bug]:'
                 )
             )
@@ -1998,6 +2153,23 @@ class DesktopWidget(QWidget):  # 主要小组件
                 self.tr('{day}日  {week}').format(day=today.day, week=list_.week[today.weekday()])
             )
 
+        elif path == 'widget-clock.ui':  # 时间显示（精确到秒）
+            self.time_text = self.findChild(QLabel, 'time_text')
+            self.date_text = self.findChild(QLabel, 'date_text')
+            if self.time_text is not None:
+                self.time_text.setText(current_time)
+            if self.date_text is not None:
+                self.date_text.setText(
+                    self.tr('{month}月{day}日  {week}').format(
+                        month=today.month, day=today.day, week=list_.week[today.weekday()]
+                    )
+                )
+
+        elif path == 'widget-duty.ui':  # 值日生
+            self.duty_title = self.findChild(QLabel, 'duty_title')
+            self.duty_text = self.findChild(QLabel, 'duty_text')
+            self.mouseReleaseEvent = self.duty_release_event
+
         elif path == 'widget-countdown.ui':  # 活动倒计时
             self.countdown_progress_bar = self.findChild(QProgressBar, 'progressBar')
             self.activity_countdown = self.findChild(QLabel, 'activity_countdown')
@@ -2411,8 +2583,8 @@ class DesktopWidget(QWidget):  # 主要小组件
             return
 
         utils.tray_icon = utils.TrayIcon(self)
-        utils.tray_icon.setToolTip(f"Class Widgets - {config_center.schedule_name[:-5]}")
-        self.tray_menu = SystemTrayMenu(title='Class Widgets', parent=self)
+        utils.tray_icon.setToolTip(f"LiumingClassroom - {config_center.schedule_name[:-5]}")
+        self.tray_menu = SystemTrayMenu(title='LiumingClassroom', parent=self)
         self.tray_menu.addActions(
             [
                 Action(
@@ -2467,6 +2639,54 @@ class DesktopWidget(QWidget):  # 主要小组件
         if utils.focus_manager:
             utils.focus_manager.restore_requested.emit()
 
+    def duty_release_event(self, event: QMouseEvent) -> None:  # 值日生小组件点击
+        if event.button() == Qt.MouseButton.LeftButton:
+            try:
+                from duty_viewer import open_duty_viewer
+
+                open_duty_viewer(self)
+            except Exception as e:
+                logger.error(f'打开值日生查看器失败: {e}')
+        else:
+            self.rightReleaseEvent(event)
+
+    def _update_duty_widget(self) -> None:
+        title = getattr(self, 'duty_title', None)
+        text = getattr(self, 'duty_text', None)
+        if title is None and text is None:
+            return
+        try:
+            from duty import (
+                DELIVERY_BOTH,
+                DELIVERY_WIDGET,
+                build_text,
+                get_duty_manager,
+                render_red_markup,
+                small_summary,
+            )
+
+            manager = get_duty_manager()
+            today_ = TimeManagerFactory.get_instance().get_today()
+            day = manager.get_day(today_)
+            # 常驻组件模式：在“值日生”小组件中长期展示大提示的标题/正文
+            resident = manager.config.prompt_delivery in (DELIVERY_WIDGET, DELIVERY_BOTH)
+            if not manager.config.enabled:
+                title_text, body = self.tr('值日生'), self.tr('未启用')
+            elif day.is_weekend or (not day.students and day.monitor is None):
+                title_text, body = build_text(manager.config.small_text, day), self.tr('今日无值日')
+            elif resident:
+                title_text = build_text(manager.config.big_title, day) or self.tr('值日生就位！')
+                body = render_red_markup(build_text(manager.config.big_text, day)).replace('\n', '<br>')
+            else:
+                title_text, body = build_text(manager.config.small_text, day), small_summary(day)
+        except Exception as e:
+            logger.error(f'更新值日生小组件失败: {e}')
+            title_text, body = self.tr('值日生'), '--'
+        if title is not None:
+            title.setText(title_text)
+        if text is not None:
+            text.setText(body)
+
     def update_data(self, path: str = '') -> None:
         global current_time, current_week, start_y, today
 
@@ -2510,6 +2730,19 @@ class DesktopWidget(QWidget):  # 主要小组件
             self.day_text.setText(
                 self.tr('{day}日  {week}').format(day=today.day, week=list_.week[today.weekday()])
             )
+
+        if path == 'widget-clock.ui':  # 时间显示（精确到秒）
+            if getattr(self, 'time_text', None) is not None:
+                self.time_text.setText(current_time)
+            if getattr(self, 'date_text', None) is not None:
+                self.date_text.setText(
+                    self.tr('{month}月{day}日  {week}').format(
+                        month=today.month, day=today.day, week=list_.week[today.weekday()]
+                    )
+                )
+
+        if path == 'widget-duty.ui':  # 值日生
+            self._update_duty_widget()
 
         if path == 'widget-current-activity.ui':  # 当前活动
             self.current_subject.setText(f'  {current_lesson_name}')
@@ -3794,23 +4027,16 @@ def init() -> None:
 
     update_timer.add_callback(mgr.update_widgets, interval=0.25)
     update_timer.add_callback(p_loader.update_plugins, interval=1)
+    update_timer.add_callback(time_announce_check, interval=1)
     update_timer.start()
+
+    _start_remote_client()  # 启动远程配置客户端（若已启用）
 
     version = config_center.read_conf("Version", "version")
     if version == "__BUILD_VERSION__":
         version = "DEBUG"
-    build_uuid = config_center.read_conf("Version", "build_runid") or "(Debug)"
-    build_type = config_center.read_conf("Version", "build_type")
-    logger.debug('Class Widgets 版本信息:')
-    if "__BUILD_RUNID__" in build_uuid or "__BUILD_TYPE__" in build_type:
-        logger.debug(f'├── 版本号: {version}')
-        logger.debug('├── 构建ID: Debug')
-        logger.debug('└── 构建类型: Debug')
-    else:
-        logger.debug(f'├── 版本号: {version}')
-        logger.debug(f'├── 构建ID: {build_uuid}')
-        logger.debug(f'└── 构建类型: {build_type}')
-    logger.success('Class Widgets 初始化完成!')
+    logger.debug(f'LiumingClassroom 版本号: {version}')
+    logger.success('LiumingClassroom 初始化完成!')
     p_loader.run_plugins()  # 运行插件
 
     first_start = False
@@ -3832,7 +4058,8 @@ def setup_signal_handlers_optimized() -> None:
 
 
 if __name__ == '__main__':
-    utils.guard = utils.SingleInstanceGuard("ClassWidgets")
+    _check_runtime_on_startup()
+    utils.guard = utils.SingleInstanceGuard("LiumingClassroom")
 
     old_config_file = CW_HOME / "config.ini"
     if old_config_file.exists():
@@ -3849,10 +4076,10 @@ if __name__ == '__main__':
 
             app = QApplication.instance() or QApplication(sys.argv)
             dlg = Dialog(
-                QCoreApplication.translate('main', 'Class Widgets 正在运行'),
+                QCoreApplication.translate('main', 'LiumingClassroom 正在运行'),
                 QCoreApplication.translate(
                     'main',
-                    'Class Widgets 正在运行！请勿打开多个实例，否则将会出现不可预知的问题。'
+                    'LiumingClassroom 正在运行！请勿打开多个实例，否则将会出现不可预知的问题。'
                     '\n(若您需要打开多个实例，请在“设置”->“高级选项”中启用“允许程序多开”)',
                 ),
             )
@@ -3871,6 +4098,7 @@ if __name__ == '__main__':
     scale_factor = float(config_center.read_conf('General', 'scale'))
     logger.info(f"当前缩放系数：{scale_factor * 100}%")
     app.setQuitOnLastWindowClosed(False)
+    app.aboutToQuit.connect(_stop_remote_client)  # 退出时关闭远程配置连接
 
     logger.debug(
         f"i18n加载,界面: {global_i18n_manager.get_current_language_view_name()},组件: {global_i18n_manager.get_current_language_widgets_name()}"
@@ -3968,9 +4196,9 @@ if __name__ == '__main__':
 
     if config_center.read_conf('Other', 'initialstartup') == '1':  # 首次启动
         try:
-            utils.add_shortcut('ClassWidgets.exe', str(CW_HOME / 'img/favicon.ico'))
+            utils.add_shortcut('LiumingClassroom.exe', str(CW_HOME / 'img/favicon.ico'))
             utils.add_shortcut_to_startmenu(
-                str(CW_HOME / 'ClassWidgets.exe'), str(CW_HOME / 'img/favicon.ico')
+                str(CW_HOME / 'LiumingClassroom.exe'), str(CW_HOME / 'img/favicon.ico')
             )
             config_center.write_conf('Other', 'initialstartup', '')
         except Exception as e:
@@ -4039,8 +4267,7 @@ if __name__ == '__main__':
 
     # w = ErrorDialog()
     # w.exec()
-    if config_center.read_conf('Version', 'auto_check_update', '1') == '1':
-        check_update()
+    # 内置更新检查已停用：自动更新改由远程后端（WebSocket OTA）下发
 
     splash_window.close()
 

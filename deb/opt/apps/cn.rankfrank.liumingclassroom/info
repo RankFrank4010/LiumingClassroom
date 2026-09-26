@@ -1,6 +1,6 @@
 {
-  "appid": "cn.rinlit.classwidgets",
-  "name": "Class Widgets",
+  "appid": "cn.rankfrank.liumingclassroom",
+  "name": "LiumingClassroom",
   "version": "",
   "arch": ["amd64"],
   "permissions": {

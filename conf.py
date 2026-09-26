@@ -16,7 +16,7 @@ from file import config_center
 from utils import TimeManagerFactory
 
 conf = config.ConfigParser()
-name = 'Class Widgets'
+name = 'LiumingClassroom'
 
 # app 图标
 app_icon = (

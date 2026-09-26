@@ -54,7 +54,7 @@ class CSES_Converter:
 
     def convert_to_cw(self) -> Union[Dict, bool]:
         """
-        将CSES文件转换为Class Widgets格式
+        将CSES文件转换为LiumingClassroom格式
         """
         default_schedule = CW_HOME / "data" / "default_schedule.json"
         try:
@@ -159,10 +159,10 @@ class CSES_Converter:
         self, cw_data: Optional[Dict[str, Any]] = None, cw_path: str = './'
     ) -> bool:
         """
-        将Class Widgets格式转换为CSES文件，需提供保存路径和Class Widgets数据/路径
+        将LiumingClassroom格式转换为CSES文件，需提供保存路径和LiumingClassroom数据/路径
         Args:
-            cw_data: Class Widgets格式数据 (Optional)
-            cw_path: Class Widgets文件路径(Optional)
+            cw_data: LiumingClassroom格式数据 (Optional)
+            cw_path: LiumingClassroom文件路径(Optional)
         """
 
         def convert(schedules: Dict[str, List[str]], type_: str = 'odd') -> None:
@@ -269,7 +269,7 @@ class CSES_Converter:
         if not self.generator:
             raise Exception("Generator not loaded, please load_generator() first.")
 
-        if cw_path != './' and cw_data is None:  # 加载Class Widgets数据
+        if cw_path != './' and cw_data is None:  # 加载LiumingClassroom数据
             try:
                 with open(cw_path, encoding='utf-8') as data:
                     cw_data = json.load(data)

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=LiumingClassroom
+Version=1.0
+Exec=env LIUMINGCLASSROOM_NOT_PORTABLE=0 /opt/apps/cn.rankfrank.liumingclassroom/files/LiumingClassroom
+Icon=/opt/apps/cn.rankfrank.liumingclassroom/entries/icons/hicolor/128x128/apps/favicon.png
+Type=Application
+Terminal=false
+StartupNotify=true
+Encoding=UTF-8
+Categories=Office;

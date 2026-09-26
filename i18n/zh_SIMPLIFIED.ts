@@ -155,13 +155,13 @@
     <name>ErrorDialog</name>
     <message>
         <location filename="../main.py" line="795"/>
-        <source>Class Widgets 崩溃报告</source>
+        <source>LiumingClassroom 崩溃报告</source>
         <translation>ClassIsWidgets 咋崩了啊</translation>
     </message>
     <message>
         <location filename="../main.py" line="796"/>
-        <source>抱歉！Class Widgets 发生了严重的错误从而无法正常运行。您可以保存下方的错误信息并向他人求助。若您认为这是程序的Bug，请点击“报告此问题”或联系开发者。</source>
-        <translation type="unfinished">抱歉！Class Widgets 发生了严重的错误从而无法正常运行。您可以保存下方的错误信息并向他人求助。若您认为这是程序的Bug，请点击“报告此问题”或联系开发者。</translation>
+        <source>抱歉！LiumingClassroom 发生了严重的错误从而无法正常运行。您可以保存下方的错误信息并向他人求助。若您认为这是程序的Bug，请点击“报告此问题”或联系开发者。</source>
+        <translation type="unfinished">抱歉！LiumingClassroom 发生了严重的错误从而无法正常运行。您可以保存下方的错误信息并向他人求助。若您认为这是程序的Bug，请点击“报告此问题”或联系开发者。</translation>
     </message>
     <message>
         <location filename="../main.py" line="815"/>
@@ -329,13 +329,13 @@
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="118"/>
-        <source>Class Widgets</source>
+        <source>LiumingClassroom</source>
         <translation>ClassIsWidgets</translation>
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="128"/>
-        <source>Class Widgets 是一款能显示当前课程的桌面组件App。其提供了直观的图形化课程表编辑和美观的桌面组件。</source>
-        <translation>Class Widgets 的 开发者(Rin) 是我的星怒</translation>
+        <source>LiumingClassroom 是一款能显示当前课程的桌面组件App。其提供了直观的图形化课程表编辑和美观的桌面组件。</source>
+        <translation>LiumingClassroom 的 开发者(Rin) 是我的星怒</translation>
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="232"/>
@@ -390,11 +390,6 @@
         <translation>星怒条约</translation>
     </message>
     <message>
-        <location filename="../view/menu/about.ui" line="523"/>
-        <source>鸣谢</source>
-        <translation>金主</translation>
-    </message>
-    <message>
         <location filename="../view/menu/about.ui" line="547"/>
         <source>更新</source>
         <translation>更！</translation>
@@ -411,12 +406,12 @@
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="660"/>
-        <source>启动 Class Widgets 时自动检查更新</source>
+        <source>启动 LiumingClassroom 时自动检查更新</source>
         <translation>自更（？）</translation>
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="667"/>
-        <source>若启用，Class Widgets 将在启动时联网检查选定的更新通道中是否有最新版本更新。</source>
+        <source>若启用，LiumingClassroom 将在启动时联网检查选定的更新通道中是否有最新版本更新。</source>
         <translation>启用后你就没有退路可言了😈</translation>
     </message>
     <message>
@@ -457,8 +452,8 @@
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="725"/>
-        <source>Copyright © 2025 RinLit, All Rights Reversed.</source>
-        <translation>Copyright © 2025 RinLit,IsHPDuwu,JerryQAQ,Baiyao,FireworkRocket and (more...114514+) All Rights Reversed. (Fake,Only Rinlit)</translation>
+        <source>Copyright © 2025 LiumingClassroom, All Rights Reversed.</source>
+        <translation>Copyright © 2025 LiumingClassroom,IsHPDuwu,JerryQAQ,Baiyao,FireworkRocket and (more...114514+) All Rights Reversed. (Fake,Only Rinlit)</translation>
     </message>
     <message>
         <location filename="../view/menu/advance.ui" line="41"/>
@@ -738,7 +733,7 @@
     </message>
     <message>
         <location filename="../view/menu/advance.ui" line="1819"/>
-        <source>若启用，Class Widgets 将在程序崩溃时自动忽略，并不再弹出窗口；以免影响教学任务。</source>
+        <source>若启用，LiumingClassroom 将在程序崩溃时自动忽略，并不再弹出窗口；以免影响教学任务。</source>
         <translation>如果启用了，你不会因为在上课时崩溃而被老师骂。</translation>
     </message>
     <message>
@@ -1208,8 +1203,8 @@
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="150"/>
-        <source>https://www.yuque.com/rinlit/class-widgets_help/swg86btkivirtnrl</source>
-        <translation type="unfinished">https://www.yuque.com/rinlit/class-widgets_help/swg86btkivirtnrl</translation>
+        <source>https://www.yuque.com/rinlit/liumingclassroom_help/swg86btkivirtnrl</source>
+        <translation type="unfinished">https://www.yuque.com/rinlit/liumingclassroom_help/swg86btkivirtnrl</translation>
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="164"/>
@@ -1218,8 +1213,8 @@
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="168"/>
-        <source>https://www.yuque.com/rinlit/class-widgets_help/lg0p91q2mg4yertn</source>
-        <translation type="unfinished">https://www.yuque.com/rinlit/class-widgets_help/lg0p91q2mg4yertn</translation>
+        <source>https://www.yuque.com/rinlit/liumingclassroom_help/lg0p91q2mg4yertn</source>
+        <translation type="unfinished">https://www.yuque.com/rinlit/liumingclassroom_help/lg0p91q2mg4yertn</translation>
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="182"/>
@@ -1228,8 +1223,8 @@
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="186"/>
-        <source>https://www.yuque.com/rinlit/class-widgets_help/vlk3plggb8edvub4#mHfUX</source>
-        <translation type="unfinished">https://www.yuque.com/rinlit/class-widgets_help/vlk3plggb8edvub4#mHfUX</translation>
+        <source>https://www.yuque.com/rinlit/liumingclassroom_help/vlk3plggb8edvub4#mHfUX</source>
+        <translation type="unfinished">https://www.yuque.com/rinlit/liumingclassroom_help/vlk3plggb8edvub4#mHfUX</translation>
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="200"/>
@@ -1238,8 +1233,8 @@
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="204"/>
-        <source>https://www.yuque.com/rinlit/class-widgets_help/gc4epffu7g5bf9os</source>
-        <translation type="unfinished">https://www.yuque.com/rinlit/class-widgets_help/gc4epffu7g5bf9os</translation>
+        <source>https://www.yuque.com/rinlit/liumingclassroom_help/gc4epffu7g5bf9os</source>
+        <translation type="unfinished">https://www.yuque.com/rinlit/liumingclassroom_help/gc4epffu7g5bf9os</translation>
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="218"/>
@@ -1838,8 +1833,8 @@
     </message>
     <message>
         <location filename="../plugin_plaza.py" line="372"/>
-        <source>为 Class Widgets 安装</source>
-        <translation type="unfinished">为 Class Widgets 安装</translation>
+        <source>为 LiumingClassroom 安装</source>
+        <translation type="unfinished">为 LiumingClassroom 安装</translation>
     </message>
     <message>
         <location filename="../plugin_plaza.py" line="375"/>
@@ -1968,11 +1963,6 @@
         <translation type="unfinished">错误</translation>
     </message>
     <message>
-        <location filename="../menu.py" line="2259"/>
-        <source>https://classwidgets.rinlit.cn/docs-user/</source>
-        <translation type="unfinished">https://classwidgets.rinlit.cn/docs-user/</translation>
-    </message>
-    <message>
         <location filename="../menu.py" line="2313"/>
         <source>上课提醒</source>
         <translation type="unfinished">上课提醒</translation>
@@ -2086,18 +2076,8 @@
     </message>
     <message>
         <location filename="../menu.py" line="3303"/>
-        <source>https://github.com/RinLit-233-shiroko/Class-Widgets</source>
-        <translation type="unfinished">https://github.com/RinLit-233-shiroko/Class-Widgets</translation>
-    </message>
-    <message>
-        <location filename="../menu.py" line="3309"/>
-        <source>https://space.bilibili.com/569522843</source>
-        <translation type="unfinished">https://space.bilibili.com/569522843</translation>
-    </message>
-    <message>
-        <location filename="../menu.py" line="3326"/>
-        <source>https://github.com/RinLit-233-shiroko/Class-Widgets?tab=readme-ov-file#致谢</source>
-        <translation type="unfinished">https://github.com/RinLit-233-shiroko/Class-Widgets?tab=readme-ov-file#致谢</translation>
+        <source>https://github.com/rankfrank4010/liumingclassroom</source>
+        <translation type="unfinished">https://github.com/rankfrank4010/liumingclassroom</translation>
     </message>
     <message>
         <location filename="../menu.py" line="3354"/>
@@ -3117,8 +3097,8 @@
     </message>
     <message>
         <location filename="../menu.py" line="6237"/>
-        <source>Class Widgets - 设置</source>
-        <translation type="unfinished">Class Widgets - 设置</translation>
+        <source>LiumingClassroom - 设置</source>
+        <translation type="unfinished">LiumingClassroom - 设置</translation>
     </message>
     <message>
         <location filename="../menu.py" line="6319"/>
@@ -3166,16 +3146,16 @@
 <context>
     <name>SplashWelcomePage</name>
     <message>
-        <source>Class Widgets</source>
-        <translation type="obsolete">Class Widgets</translation>
+        <source>LiumingClassroom</source>
+        <translation type="obsolete">LiumingClassroom</translation>
     </message>
     <message>
         <source>v1.2.0.0 LTS</source>
         <translation type="obsolete">v1.2.0.0 长期支持版</translation>
     </message>
     <message>
-        <source>© 2025 RinLit</source>
-        <translation type="obsolete">© 2025 RinLit</translation>
+        <source>© 2025 LiumingClassroom</source>
+        <translation type="obsolete">© 2025 LiumingClassroom</translation>
     </message>
     <message>
         <source>Initializing modules…</source>
@@ -3186,24 +3166,24 @@
         <translation type="obsolete">版本更新日志</translation>
     </message>
     <message>
-        <source>https://github.com/Class-Widgets/Class-Widgets/releases</source>
-        <translation type="obsolete">https://github.com/Class-Widgets/Class-Widgets/releases</translation>
+        <source>https://github.com/rankfrank4010/liumingclassroom/releases</source>
+        <translation type="obsolete">https://github.com/rankfrank4010/liumingclassroom/releases</translation>
     </message>
     <message>
         <source>Documentation</source>
         <translation type="obsolete">文档</translation>
     </message>
     <message>
-        <source>https://www.yuque.com/rinlit/class-widgets_help/gs3gsbms1iivgibm</source>
-        <translation type="obsolete">https://www.yuque.com/rinlit/class-widgets_help/gs3gsbms1iivgibm</translation>
+        <source>https://www.yuque.com/rinlit/liumingclassroom_help/gs3gsbms1iivgibm</source>
+        <translation type="obsolete">https://www.yuque.com/rinlit/liumingclassroom_help/gs3gsbms1iivgibm</translation>
     </message>
     <message>
         <source>Community</source>
         <translation type="obsolete">社区</translation>
     </message>
     <message>
-        <source>https://github.com/Class-Widgets/Class-Widgets</source>
-        <translation type="obsolete">https://github.com/Class-Widgets/Class-Widgets</translation>
+        <source>https://github.com/rankfrank4010/liumingclassroom</source>
+        <translation type="obsolete">https://github.com/rankfrank4010/liumingclassroom</translation>
     </message>
 </context>
 <context>
@@ -3688,8 +3668,8 @@
     <name>file</name>
     <message>
         <location filename="../file.py" line="50"/>
-        <source>Class Widgets 启动失败w(ﾟДﾟ)w</source>
-        <translation type="unfinished">Class Widgets 启动失败w(ﾟДﾟ)w</translation>
+        <source>LiumingClassroom 启动失败w(ﾟДﾟ)w</source>
+        <translation type="unfinished">LiumingClassroom 启动失败w(ﾟДﾟ)w</translation>
     </message>
     <message>
         <location filename="../file.py" line="51"/>
@@ -4548,14 +4528,14 @@
     </message>
     <message>
         <location filename="../main.py" line="3852"/>
-        <source>Class Widgets 正在运行</source>
-        <translation type="unfinished">Class Widgets 正在运行</translation>
+        <source>LiumingClassroom 正在运行</source>
+        <translation type="unfinished">LiumingClassroom 正在运行</translation>
     </message>
     <message>
         <location filename="../main.py" line="3853"/>
-        <source>Class Widgets 正在运行！请勿打开多个实例，否则将会出现不可预知的问题。
+        <source>LiumingClassroom 正在运行！请勿打开多个实例，否则将会出现不可预知的问题。
 (若您需要打开多个实例，请在“设置”-&gt;“高级选项”中启用“允许程序多开”)</source>
-        <translation type="unfinished">Class Widgets 正在运行！请勿打开多个实例，否则将会出现不可预知的问题。
+        <translation type="unfinished">LiumingClassroom 正在运行！请勿打开多个实例，否则将会出现不可预知的问题。
 (若您需要打开多个实例，请在“设置”-&gt;“高级选项”中启用“允许程序多开”)</translation>
     </message>
     <message>
@@ -4648,8 +4628,8 @@
     </message>
     <message>
         <location filename="../splash.py" line="110"/>
-        <source>Class Widgets 启动中...</source>
-        <translation type="unfinished">Class Widgets 启动中...</translation>
+        <source>LiumingClassroom 启动中...</source>
+        <translation type="unfinished">LiumingClassroom 启动中...</translation>
     </message>
     <message>
         <location filename="../splash.py" line="161"/>
@@ -4665,9 +4645,9 @@
         <translation type="vanished">文件无法打开夹子</translation>
     </message>
     <message>
-        <source>Class Widgets 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
+        <source>LiumingClassroom 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
 {path}</source>
-        <comment>Class Widgets 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
+        <comment>LiumingClassroom 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
 {path}</comment>
         <translation type="vanished">请打开 {path}，因为这是主人的命令😋</translation>
     </message>
@@ -4757,8 +4737,8 @@
         <translation type="vanished">sudo rm -rf  /* 成功</translation>
     </message>
     <message>
-        <source>插件 “{title}” 已卸载。请重启 Class Widgets 以完全移除。</source>
-        <comment>插件 “{title}” 已卸载。请重启 Class Widgets 以完全移除。</comment>
+        <source>插件 “{title}” 已卸载。请重启 LiumingClassroom 以完全移除。</source>
+        <comment>插件 “{title}” 已卸载。请重启 LiumingClassroom 以完全移除。</comment>
         <translation type="vanished">你的电脑被我清空了，重启就彻底炸了😈</translation>
     </message>
     <message>
@@ -4778,9 +4758,9 @@
     </message>
     <message>
         <location filename="../menu.py" line="430"/>
-        <source>Class Widgets 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
+        <source>LiumingClassroom 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
 {path}</source>
-        <translation type="unfinished">Class Widgets 在您的系统下不支持自动打开文件夹，请手动打开以下地址：{path}</translation>
+        <translation type="unfinished">LiumingClassroom 在您的系统下不支持自动打开文件夹，请手动打开以下地址：{path}</translation>
     </message>
     <message>
         <location filename="../menu.py" line="435"/>
@@ -4866,8 +4846,8 @@
     </message>
     <message>
         <location filename="../menu.py" line="793"/>
-        <source>此项目 (Class Widgets) 基于 GPL-3.0 许可证授权发布，详情请参阅：</source>
-        <translation type="unfinished">此项目（Class Widgets）基于 GPL-3.0 许可证授权发布，详情请参阅：</translation>
+        <source>此项目 (LiumingClassroom) 基于 GPL-3.0 许可证授权发布，详情请参阅：</source>
+        <translation type="unfinished">此项目（LiumingClassroom）基于 GPL-3.0 许可证授权发布，详情请参阅：</translation>
     </message>
     <message>
         <location filename="../menu.py" line="875"/>
@@ -4926,8 +4906,8 @@
     </message>
     <message>
         <location filename="../menu.py" line="1023"/>
-        <source>插件 “{title}” 已卸载。请重启 Class Widgets 以完全移除。</source>
-        <translation type="unfinished">插件“{title}”已卸载。请重启 Class Widgets 以完全移除。</translation>
+        <source>插件 “{title}” 已卸载。请重启 LiumingClassroom 以完全移除。</source>
+        <translation type="unfinished">插件“{title}”已卸载。请重启 LiumingClassroom 以完全移除。</translation>
     </message>
     <message>
         <location filename="../menu.py" line="1035"/>
@@ -4944,10 +4924,10 @@
     <name>plugin_plaza</name>
     <message>
         <location filename="../plugin_plaza.py" line="267"/>
-        <source>此插件版本（{plugin_ver}）高于当前设备中 Class Widgets 兼容的插件版本（{SELF_PLUGIN_VERSION}）；
-请更新 Class Widgets 后再尝试安装此插件。</source>
-        <translation type="unfinished">此插件版本（{plugin_ver}）高于当前设备中 Class Widgets 兼容的插件版本（{SELF_PLUGIN_VERSION}）；
-请更新 Class Widgets 后再尝试安装此插件。</translation>
+        <source>此插件版本（{plugin_ver}）高于当前设备中 LiumingClassroom 兼容的插件版本（{SELF_PLUGIN_VERSION}）；
+请更新 LiumingClassroom 后再尝试安装此插件。</source>
+        <translation type="unfinished">此插件版本（{plugin_ver}）高于当前设备中 LiumingClassroom 兼容的插件版本（{SELF_PLUGIN_VERSION}）；
+请更新 LiumingClassroom 后再尝试安装此插件。</translation>
     </message>
     <message>
         <location filename="../plugin_plaza.py" line="283"/>

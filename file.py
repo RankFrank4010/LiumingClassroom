@@ -25,6 +25,11 @@ class ConfigCenter:
         self.default_data: Dict[str, Any] = {}
         self.schedule_update_callback = schedule_update_callback
 
+        # 远程锁定项（仅允许通过 WebSocket 远程修改），形如 {"Section.key"}
+        self.remote_lock_path = CONFIG_HOME / "remote_lock.json"
+        self.locked_keys: set = set()
+        self._load_locks()
+
         self._load_default_config()
         self._load_user_config()
         self._check_and_migrate_config()
@@ -47,7 +52,7 @@ class ConfigCenter:
 
             QApplication.instance() or QApplication(sys.argv)
             dlg = Dialog(
-                QCoreApplication.translate("file", 'Class Widgets 启动失败w(ﾟДﾟ)w'),
+                QCoreApplication.translate("file", 'LiumingClassroom 启动失败w(ﾟДﾟ)w'),
                 QCoreApplication.translate(
                     "file", '加载默认配置文件失败,请检查文件完整性或尝试重新安装。\n错误信息: {e}'
                 ).format(e=e),
@@ -65,6 +70,49 @@ class ConfigCenter:
             self.config.read(self.user_config_path, encoding='utf-8')
         except Exception as e:
             logger.error(f"加载配置文件失败: {e}")
+
+    def _load_locks(self) -> None:
+        """加载“仅允许远程修改”的配置项列表。"""
+        try:
+            if self.remote_lock_path.exists():
+                with open(self.remote_lock_path, encoding="utf-8") as file:
+                    data = json.load(file)
+                self.locked_keys = {str(k) for k in (data.get("locked") or [])}
+            else:
+                self.locked_keys = set()
+        except Exception as e:
+            logger.error(f"加载远程锁定配置失败: {e}")
+            self.locked_keys = set()
+
+    def _save_locks(self) -> None:
+        try:
+            self.remote_lock_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.remote_lock_path, "w", encoding="utf-8") as file:
+                json.dump({"locked": sorted(self.locked_keys)}, file, ensure_ascii=False, indent=4)
+        except Exception as e:
+            logger.error(f"保存远程锁定配置失败: {e}")
+
+    @staticmethod
+    def _lock_id(section: str, key: str) -> str:
+        return f"{section}.{key}"
+
+    def is_locked(self, section: str, key: str) -> bool:
+        """该配置项是否被锁定为“仅允许远程修改”（支持 ``Section.*`` 锁定整节）。"""
+        return (
+            self._lock_id(section, key) in self.locked_keys
+            or self._lock_id(section, "*") in self.locked_keys
+        )
+
+    def set_locked(self, section: str, key: str, locked: bool) -> None:
+        lock_id = self._lock_id(section, key)
+        if locked:
+            self.locked_keys.add(lock_id)
+        else:
+            self.locked_keys.discard(lock_id)
+        self._save_locks()
+
+    def list_locks(self) -> List[str]:
+        return sorted(self.locked_keys)
 
     def _migrate_config(self) -> None:
         """迁移配置文件（当配置文件版本不一致时）"""
@@ -358,13 +406,21 @@ class ConfigCenter:
                 return {}
             return str(value) if value is not None else ""
 
-    def write_conf(self, section: str, key: str, value: Any) -> None:
-        """写入配置项"""
+    def write_conf(self, section: str, key: str, value: Any, source: str = "local") -> bool:
+        """写入配置项。
+
+        ``source`` 为 ``"remote"`` 时视为来自 WebSocket 远程端，可写入被锁定的项；
+        其余（默认本地）来源若命中锁定项则拒绝写入并返回 ``False``。
+        """
+        if source != "remote" and self.is_locked(section, key):
+            logger.warning(f"配置项 {section}.{key} 已锁定为仅允许远程修改，已忽略本地写入")
+            return False
         if section not in self.config:
             self.config.add_section(section)
         self.config[section][key] = str(value)
         with open(self.user_config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
+        return True
 
 
 class ScheduleCenter:

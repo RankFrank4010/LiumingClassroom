@@ -168,13 +168,13 @@
     <name>ErrorDialog</name>
     <message>
         <location filename="../main.py" line="795"/>
-        <source>Class Widgets 崩溃报告</source>
-        <translation>Class Widgets 崩潰報告</translation>
+        <source>LiumingClassroom 崩溃报告</source>
+        <translation>LiumingClassroom 崩潰報告</translation>
     </message>
     <message>
         <location filename="../main.py" line="796"/>
-        <source>抱歉！Class Widgets 发生了严重的错误从而无法正常运行。您可以保存下方的错误信息并向他人求助。若您认为这是程序的Bug，请点击“报告此问题”或联系开发者。</source>
-        <translation>抱歉！Class Widgets 發生嚴重錯誤，未能正常運行。您可儲存以下錯誤資訊，並尋求技術支援。若您認為這是程式錯誤，請點擊「回報問題」或聯絡開發人員。</translation>
+        <source>抱歉！LiumingClassroom 发生了严重的错误从而无法正常运行。您可以保存下方的错误信息并向他人求助。若您认为这是程序的Bug，请点击“报告此问题”或联系开发者。</source>
+        <translation>抱歉！LiumingClassroom 發生嚴重錯誤，未能正常運行。您可儲存以下錯誤資訊，並尋求技術支援。若您認為這是程式錯誤，請點擊「回報問題」或聯絡開發人員。</translation>
     </message>
     <message>
         <location filename="../main.py" line="815"/>
@@ -342,13 +342,13 @@
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="118"/>
-        <source>Class Widgets</source>
-        <translation>Class Widgets</translation>
+        <source>LiumingClassroom</source>
+        <translation>LiumingClassroom</translation>
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="128"/>
-        <source>Class Widgets 是一款能显示当前课程的桌面组件App。其提供了直观的图形化课程表编辑和美观的桌面组件。</source>
-        <translation>Class Widgets 是一款可以顯示當前課堂的桌面小工具 App。它提供直觀的圖像化課程表編輯功能，同時有非常靚的桌面小工具設計。</translation>
+        <source>LiumingClassroom 是一款能显示当前课程的桌面组件App。其提供了直观的图形化课程表编辑和美观的桌面组件。</source>
+        <translation>LiumingClassroom 是一款可以顯示當前課堂的桌面小工具 App。它提供直觀的圖像化課程表編輯功能，同時有非常靚的桌面小工具設計。</translation>
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="232"/>
@@ -403,11 +403,6 @@
         <translation>查看開源授權條款</translation>
     </message>
     <message>
-        <location filename="../view/menu/about.ui" line="523"/>
-        <source>鸣谢</source>
-        <translation>致謝</translation>
-    </message>
-    <message>
         <location filename="../view/menu/about.ui" line="547"/>
         <source>更新</source>
         <translation>更新</translation>
@@ -424,13 +419,13 @@
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="660"/>
-        <source>启动 Class Widgets 时自动检查更新</source>
-        <translation>啟動 Class Widgets 時自動檢查更新</translation>
+        <source>启动 LiumingClassroom 时自动检查更新</source>
+        <translation>啟動 LiumingClassroom 時自動檢查更新</translation>
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="667"/>
-        <source>若启用，Class Widgets 将在启动时联网检查选定的更新通道中是否有最新版本更新。</source>
-        <translation>若啟用，Class Widgets 將於啟動時連綫檢查所選更新通道是否有最新版本更新。</translation>
+        <source>若启用，LiumingClassroom 将在启动时联网检查选定的更新通道中是否有最新版本更新。</source>
+        <translation>若啟用，LiumingClassroom 將於啟動時連綫檢查所選更新通道是否有最新版本更新。</translation>
     </message>
     <message>
         <location filename="../view/menu/advance.ui" line="152"/>
@@ -470,8 +465,8 @@
     </message>
     <message>
         <location filename="../view/menu/about.ui" line="725"/>
-        <source>Copyright © 2025 RinLit, All Rights Reversed.</source>
-        <translation>Copyright © 2025 RinLit, All Rights Reversed.</translation>
+        <source>Copyright © 2025 LiumingClassroom, All Rights Reversed.</source>
+        <translation>Copyright © 2025 LiumingClassroom, All Rights Reversed.</translation>
     </message>
     <message>
         <location filename="../view/menu/advance.ui" line="41"/>
@@ -751,8 +746,8 @@
     </message>
     <message>
         <location filename="../view/menu/advance.ui" line="1819"/>
-        <source>若启用，Class Widgets 将在程序崩溃时自动忽略，并不再弹出窗口；以免影响教学任务。</source>
-        <translation>若啟用，Class Widgets 將會在程式崩潰時自動忽略，並不再彈出窗口；以免影響教學正常進行。</translation>
+        <source>若启用，LiumingClassroom 将在程序崩溃时自动忽略，并不再弹出窗口；以免影响教学任务。</source>
+        <translation>若啟用，LiumingClassroom 將會在程式崩潰時自動忽略，並不再彈出窗口；以免影響教學正常進行。</translation>
     </message>
     <message>
         <location filename="../view/menu/advance.ui" line="1890"/>
@@ -843,20 +838,20 @@
         <translation>課程時間表</translation>
     </message>
     <message>
-        <source>导入 Class Widgets 课程表</source>
-        <translation type="vanished">導入 Class Widgets 課程時間表</translation>
+        <source>导入 LiumingClassroom 课程表</source>
+        <translation type="vanished">導入 LiumingClassroom 課程時間表</translation>
     </message>
     <message>
-        <source>需导入从其他 Class Widgets 导出的课程表</source>
-        <translation type="vanished">需要導入從其他 Class Widgets 導出的課程時間表</translation>
+        <source>需导入从其他 LiumingClassroom 导出的课程表</source>
+        <translation type="vanished">需要導入從其他 LiumingClassroom 導出的課程時間表</translation>
     </message>
     <message>
         <source>导入课程表</source>
         <translation type="vanished">導入課程時間表</translation>
     </message>
     <message>
-        <source>导出 Class Widgets 课程表</source>
-        <translation type="vanished">導出 Class Widgets 課程時間表</translation>
+        <source>导出 LiumingClassroom 课程表</source>
+        <translation type="vanished">導出 LiumingClassroom 課程時間表</translation>
     </message>
     <message>
         <source>将当前使用的课程表文件 (.json) 导出</source>
@@ -867,11 +862,11 @@
         <translation type="vanished">導出課程時間表</translation>
     </message>
     <message>
-        <source>管理 Class Widgets 课程表</source>
-        <translation type="vanished">管理 Class Widgets 課程時間表</translation>
+        <source>管理 LiumingClassroom 课程表</source>
+        <translation type="vanished">管理 LiumingClassroom 課程時間表</translation>
     </message>
     <message>
-        <source>打开 Class Widgets 课程表文件夹</source>
+        <source>打开 LiumingClassroom 课程表文件夹</source>
         <translation type="vanished">打開 Class Wigets 課程時間表資料夾</translation>
     </message>
     <message>
@@ -893,9 +888,9 @@
     </message>
     <message>
         <source>需导入从其他支持的软件导出的 CSES 格式的课程表
-注意：由 CSES 格式转换的 Class Widgets 课程表可读性可能降低</source>
+注意：由 CSES 格式转换的 LiumingClassroom 课程表可读性可能降低</source>
         <translation type="vanished">需要導入由其他支援的軟件所導出的 CSES 格式課程時間表
-注意：由 CSES 格式轉換而成的 Class Widgets 課程時間表，其可讀性可能會降低。</translation>
+注意：由 CSES 格式轉換而成的 LiumingClassroom 課程時間表，其可讀性可能會降低。</translation>
     </message>
     <message>
         <source>导入 CSES 文件</source>
@@ -1294,8 +1289,8 @@
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="150"/>
-        <source>https://www.yuque.com/rinlit/class-widgets_help/swg86btkivirtnrl</source>
-        <translation>https://www.yuque.com/rinlit/class-widgets_help/swg86btkivirtnrl</translation>
+        <source>https://www.yuque.com/rinlit/liumingclassroom_help/swg86btkivirtnrl</source>
+        <translation>https://www.yuque.com/rinlit/liumingclassroom_help/swg86btkivirtnrl</translation>
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="164"/>
@@ -1304,8 +1299,8 @@
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="168"/>
-        <source>https://www.yuque.com/rinlit/class-widgets_help/lg0p91q2mg4yertn</source>
-        <translation>https://www.yuque.com/rinlit/class-widgets_help/lg0p91q2mg4yertn</translation>
+        <source>https://www.yuque.com/rinlit/liumingclassroom_help/lg0p91q2mg4yertn</source>
+        <translation>https://www.yuque.com/rinlit/liumingclassroom_help/lg0p91q2mg4yertn</translation>
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="182"/>
@@ -1314,8 +1309,8 @@
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="186"/>
-        <source>https://www.yuque.com/rinlit/class-widgets_help/vlk3plggb8edvub4#mHfUX</source>
-        <translation>https://www.yuque.com/rinlit/class-widgets_help/vlk3plggb8edvub4#mHfUX</translation>
+        <source>https://www.yuque.com/rinlit/liumingclassroom_help/vlk3plggb8edvub4#mHfUX</source>
+        <translation>https://www.yuque.com/rinlit/liumingclassroom_help/vlk3plggb8edvub4#mHfUX</translation>
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="200"/>
@@ -1324,8 +1319,8 @@
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="204"/>
-        <source>https://www.yuque.com/rinlit/class-widgets_help/gc4epffu7g5bf9os</source>
-        <translation>https://www.yuque.com/rinlit/class-widgets_help/gc4epffu7g5bf9os</translation>
+        <source>https://www.yuque.com/rinlit/liumingclassroom_help/gc4epffu7g5bf9os</source>
+        <translation>https://www.yuque.com/rinlit/liumingclassroom_help/gc4epffu7g5bf9os</translation>
     </message>
     <message>
         <location filename="../view/menu/help.ui" line="218"/>
@@ -1925,8 +1920,8 @@
     </message>
     <message>
         <location filename="../plugin_plaza.py" line="372"/>
-        <source>为 Class Widgets 安装</source>
-        <translation>為 Class Widgets 安裝</translation>
+        <source>为 LiumingClassroom 安装</source>
+        <translation>為 LiumingClassroom 安裝</translation>
     </message>
     <message>
         <location filename="../plugin_plaza.py" line="375"/>
@@ -2053,17 +2048,6 @@
         <location filename="../menu.py" line="2224"/>
         <source>错误</source>
         <translation>錯誤</translation>
-    </message>
-    <message>
-        <source>menu</source>
-        <comment>https://classwidgets.rinlit.cn/docs-user/</comment>
-        <translation type="vanished">SettingsMenu
-https://classwidgets.rinlit.cn/docs-user/</translation>
-    </message>
-    <message>
-        <location filename="../menu.py" line="2259"/>
-        <source>https://classwidgets.rinlit.cn/docs-user/</source>
-        <translation>https://classwidgets.rinlit.cn/docs-user/</translation>
     </message>
     <message>
         <location filename="../menu.py" line="2313"/>
@@ -2219,18 +2203,8 @@ https://classwidgets.rinlit.cn/docs-user/</translation>
     </message>
     <message>
         <location filename="../menu.py" line="3303"/>
-        <source>https://github.com/RinLit-233-shiroko/Class-Widgets</source>
-        <translation>https://github.com/RinLit-233-shiroko/Class-Widgets</translation>
-    </message>
-    <message>
-        <location filename="../menu.py" line="3309"/>
-        <source>https://space.bilibili.com/569522843</source>
-        <translation>https://space.bilibili.com/569522843</translation>
-    </message>
-    <message>
-        <location filename="../menu.py" line="3326"/>
-        <source>https://github.com/RinLit-233-shiroko/Class-Widgets?tab=readme-ov-file#致谢</source>
-        <translation>https://github.com/RinLit-233-shiroko/Class-Widgets?tab=readme-ov-file#致谢</translation>
+        <source>https://github.com/rankfrank4010/liumingclassroom</source>
+        <translation>https://github.com/rankfrank4010/liumingclassroom</translation>
     </message>
     <message>
         <location filename="../menu.py" line="3354"/>
@@ -2845,10 +2819,10 @@ https://classwidgets.rinlit.cn/docs-user/</translation>
     </message>
     <message>
         <source>课程表文件导入失败！
-可能为格式错误或文件损坏，请检查此文件是否为 Class Widgets 课程表文件。
+可能为格式错误或文件损坏，请检查此文件是否为 LiumingClassroom 课程表文件。
 详情请查看Log日志，日志位于./log/下。</source>
         <translation type="vanished">課程時間表文件導入失敗！
-可能是格式錯誤或者文件損壞，請檢查導入文件是否為 Class Widgets 的課程時間表文件。
+可能是格式錯誤或者文件損壞，請檢查導入文件是否為 LiumingClassroom 的課程時間表文件。
 更多請查閱Log紀錄，日誌位於./log/。</translation>
     </message>
     <message>
@@ -3183,11 +3157,11 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
     <message>
         <source>menu</source>
         <comment>课程表文件导入失败！
-可能为格式错误或文件损坏，请检查此文件是否为 Class Widgets 课程表文件。
+可能为格式错误或文件损坏，请检查此文件是否为 LiumingClassroom 课程表文件。
 详情请查看Log日志，日志位于./log/下。</comment>
         <translation type="vanished">SettingsMenu
 課程表檔案導入失敗！
-可能是格式錯誤或檔案已損壞，請確認該檔案是否為 Class Widgets 課程表檔案。
+可能是格式錯誤或檔案已損壞，請確認該檔案是否為 LiumingClassroom 課程表檔案。
 更多請查閱紀錄，紀錄位於 ./log/ 目錄下。</translation>
     </message>
     <message>
@@ -3314,8 +3288,8 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
         <translation type="vanished">無辦法繼續添加 o(TヘTo)</translation>
     </message>
     <message>
-        <source>Class Widgets 最多只能添加10个“节点”！</source>
-        <translation type="vanished">Class Widgets 最多只能添加10個“節點”!</translation>
+        <source>LiumingClassroom 最多只能添加10个“节点”！</source>
+        <translation type="vanished">LiumingClassroom 最多只能添加10個“節點”!</translation>
     </message>
     <message>
         <source>menu</source>
@@ -3406,8 +3380,8 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
     </message>
     <message>
         <location filename="../menu.py" line="6237"/>
-        <source>Class Widgets - 设置</source>
-        <translation>Class Widgets - 設定</translation>
+        <source>LiumingClassroom - 设置</source>
+        <translation>LiumingClassroom - 設定</translation>
     </message>
     <message>
         <location filename="../menu.py" line="6319"/>
@@ -3510,16 +3484,16 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
         <translation type="vanished">Welcome</translation>
     </message>
     <message>
-        <source>Class Widgets</source>
-        <translation type="vanished">Class Widgets</translation>
+        <source>LiumingClassroom</source>
+        <translation type="vanished">LiumingClassroom</translation>
     </message>
     <message>
         <source>v1.2.0.0 LTS</source>
         <translation type="vanished">v1.2.0.0 LTS</translation>
     </message>
     <message>
-        <source>© 2025 RinLit</source>
-        <translation type="vanished">© 2025 RinLit</translation>
+        <source>© 2025 LiumingClassroom</source>
+        <translation type="vanished">© 2025 LiumingClassroom</translation>
     </message>
     <message>
         <source>Initializing modules…</source>
@@ -3530,24 +3504,24 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
         <translation type="vanished">Release notes</translation>
     </message>
     <message>
-        <source>https://github.com/Class-Widgets/Class-Widgets/releases</source>
-        <translation type="vanished">https://github.com/Class-Widgets/Class-Widgets/releases</translation>
+        <source>https://github.com/rankfrank4010/liumingclassroom/releases</source>
+        <translation type="vanished">https://github.com/rankfrank4010/liumingclassroom/releases</translation>
     </message>
     <message>
         <source>Documentation</source>
         <translation type="vanished">Documentation</translation>
     </message>
     <message>
-        <source>https://www.yuque.com/rinlit/class-widgets_help/gs3gsbms1iivgibm</source>
-        <translation type="vanished">https://www.yuque.com/rinlit/class-widgets_help/gs3gsbms1iivgibm</translation>
+        <source>https://www.yuque.com/rinlit/liumingclassroom_help/gs3gsbms1iivgibm</source>
+        <translation type="vanished">https://www.yuque.com/rinlit/liumingclassroom_help/gs3gsbms1iivgibm</translation>
     </message>
     <message>
         <source>Community</source>
         <translation type="vanished">Community</translation>
     </message>
     <message>
-        <source>https://github.com/Class-Widgets/Class-Widgets</source>
-        <translation type="vanished">https://github.com/Class-Widgets/Class-Widgets</translation>
+        <source>https://github.com/rankfrank4010/liumingclassroom</source>
+        <translation type="vanished">https://github.com/rankfrank4010/liumingclassroom</translation>
     </message>
 </context>
 <context>
@@ -4060,8 +4034,8 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
     </message>
     <message>
         <location filename="../file.py" line="50"/>
-        <source>Class Widgets 启动失败w(ﾟДﾟ)w</source>
-        <translation>Class Widgets 啟動失敗 w(ﾟДﾟ)w</translation>
+        <source>LiumingClassroom 启动失败w(ﾟДﾟ)w</source>
+        <translation>LiumingClassroom 啟動失敗 w(ﾟДﾟ)w</translation>
     </message>
     <message>
         <location filename="../file.py" line="51"/>
@@ -4924,14 +4898,14 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
     </message>
     <message>
         <location filename="../main.py" line="3852"/>
-        <source>Class Widgets 正在运行</source>
-        <translation>Class Widgets 正在運行</translation>
+        <source>LiumingClassroom 正在运行</source>
+        <translation>LiumingClassroom 正在運行</translation>
     </message>
     <message>
         <location filename="../main.py" line="3853"/>
-        <source>Class Widgets 正在运行！请勿打开多个实例，否则将会出现不可预知的问题。
+        <source>LiumingClassroom 正在运行！请勿打开多个实例，否则将会出现不可预知的问题。
 (若您需要打开多个实例，请在“设置”-&gt;“高级选项”中启用“允许程序多开”)</source>
-        <translation>Class Widgets 正在運行！請勿開啟多個實例，否則可能會出現不可預知的問題。
+        <translation>LiumingClassroom 正在運行！請勿開啟多個實例，否則可能會出現不可預知的問題。
 （若您需要開啟多個實例，請於「設定」→「進階選項」中啟用「允許程式多開」）</translation>
     </message>
     <message>
@@ -5024,8 +4998,8 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
     </message>
     <message>
         <location filename="../splash.py" line="110"/>
-        <source>Class Widgets 启动中...</source>
-        <translation>Class Widgets 啟動中...</translation>
+        <source>LiumingClassroom 启动中...</source>
+        <translation>LiumingClassroom 啟動中...</translation>
     </message>
     <message>
         <location filename="../splash.py" line="161"/>
@@ -5041,11 +5015,11 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
         <translation type="vanished">未能開啟資料夾</translation>
     </message>
     <message>
-        <source>Class Widgets 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
+        <source>LiumingClassroom 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
 {path}</source>
-        <comment>Class Widgets 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
+        <comment>LiumingClassroom 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
 {path}</comment>
-        <translation type="vanished">Class Widgets 未能在你的系統中自動開啟資料夾，請手動開啟以下位置：{path}</translation>
+        <translation type="vanished">LiumingClassroom 未能在你的系統中自動開啟資料夾，請手動開啟以下位置：{path}</translation>
     </message>
     <message>
         <source>好</source>
@@ -5088,9 +5062,9 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
         <translation type="vanished">軟件許可協議</translation>
     </message>
     <message>
-        <source>此项目 (Class Widgets) 基于 GPL-3.0 许可证授权发布，详情请参阅：</source>
-        <comment>此项目 (Class Widgets) 基于 GPL-3.0 许可证授权发布，详情请参阅：</comment>
-        <translation type="vanished">本項目（Class Widgets）以 GPL-3.0 許可證授權發佈，更多請參閱：</translation>
+        <source>此项目 (LiumingClassroom) 基于 GPL-3.0 许可证授权发布，详情请参阅：</source>
+        <comment>此项目 (LiumingClassroom) 基于 GPL-3.0 许可证授权发布，详情请参阅：</comment>
+        <translation type="vanished">本項目（LiumingClassroom）以 GPL-3.0 許可證授權發佈，更多請參閱：</translation>
     </message>
     <message>
         <source>打开“{title}”插件文件夹</source>
@@ -5138,9 +5112,9 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
         <translation type="vanished">卸載成功</translation>
     </message>
     <message>
-        <source>插件 “{title}” 已卸载。请重启 Class Widgets 以完全移除。</source>
-        <comment>插件 “{title}” 已卸载。请重启 Class Widgets 以完全移除。</comment>
-        <translation type="vanished">插件“{title}”已卸載。請重啟 Class Widgets 以完成移除程式</translation>
+        <source>插件 “{title}” 已卸载。请重启 LiumingClassroom 以完全移除。</source>
+        <comment>插件 “{title}” 已卸载。请重启 LiumingClassroom 以完全移除。</comment>
+        <translation type="vanished">插件“{title}”已卸載。請重啟 LiumingClassroom 以完成移除程式</translation>
     </message>
     <message>
         <source>卸载失败</source>
@@ -5159,9 +5133,9 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
     </message>
     <message>
         <location filename="../menu.py" line="430"/>
-        <source>Class Widgets 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
+        <source>LiumingClassroom 在您的系统下不支持自动打开文件夹，请手动打开以下地址：
 {path}</source>
-        <translation>Class Widgets 未能在你的系統中自動開啟資料夾，請手動開啟以下位置:
+        <translation>LiumingClassroom 未能在你的系統中自動開啟資料夾，請手動開啟以下位置:
 {path}</translation>
     </message>
     <message>
@@ -5248,8 +5222,8 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
     </message>
     <message>
         <location filename="../menu.py" line="793"/>
-        <source>此项目 (Class Widgets) 基于 GPL-3.0 许可证授权发布，详情请参阅：</source>
-        <translation>本項目（Class Widgets）以 GPL-3.0 許可證授權發佈，更多請參閱：</translation>
+        <source>此项目 (LiumingClassroom) 基于 GPL-3.0 许可证授权发布，详情请参阅：</source>
+        <translation>本項目（LiumingClassroom）以 GPL-3.0 許可證授權發佈，更多請參閱：</translation>
     </message>
     <message>
         <location filename="../menu.py" line="875"/>
@@ -5308,8 +5282,8 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
     </message>
     <message>
         <location filename="../menu.py" line="1023"/>
-        <source>插件 “{title}” 已卸载。请重启 Class Widgets 以完全移除。</source>
-        <translation>插件“{title}”已卸載。請重啟 Class Widgets 以完成移除程式。</translation>
+        <source>插件 “{title}” 已卸载。请重启 LiumingClassroom 以完全移除。</source>
+        <translation>插件“{title}”已卸載。請重啟 LiumingClassroom 以完成移除程式。</translation>
     </message>
     <message>
         <location filename="../menu.py" line="1035"/>
@@ -5326,10 +5300,10 @@ CSES 通用課程時間表交換文件(*.yaml)</translation>
     <name>plugin_plaza</name>
     <message>
         <location filename="../plugin_plaza.py" line="267"/>
-        <source>此插件版本（{plugin_ver}）高于当前设备中 Class Widgets 兼容的插件版本（{SELF_PLUGIN_VERSION}）；
-请更新 Class Widgets 后再尝试安装此插件。</source>
-        <translation>本插件版本（{plugin_ver}）高於目前裝置中 Class Widgets 所支援的插件版本（{SELF_PLUGIN_VERSION}）；
-請先更新 Class Widgets，然後再次嘗試安裝本插件。</translation>
+        <source>此插件版本（{plugin_ver}）高于当前设备中 LiumingClassroom 兼容的插件版本（{SELF_PLUGIN_VERSION}）；
+请更新 LiumingClassroom 后再尝试安装此插件。</source>
+        <translation>本插件版本（{plugin_ver}）高於目前裝置中 LiumingClassroom 所支援的插件版本（{SELF_PLUGIN_VERSION}）；
+請先更新 LiumingClassroom，然後再次嘗試安裝本插件。</translation>
     </message>
     <message>
         <location filename="../plugin_plaza.py" line="283"/>

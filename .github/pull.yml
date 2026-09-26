@@ -2,7 +2,7 @@
 version: "1"
 rules:
   - base: main
-    upstream: Class-Widgets:main # 上游仓库的主分支
+    upstream: rankfrank4010:main # 上游仓库的主分支
     mergeMethod: rebase # 使用硬重置方式同步
     mergeUnstable: false # 可选: 当mergeable_state不是clean时是否合并
 #  - base: develop

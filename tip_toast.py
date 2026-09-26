@@ -126,7 +126,7 @@ class tip_toast(QWidget):
 
         prepare_minutes = config_center.read_conf('Toast', 'prepare_minutes')
         format_values = defaultdict(
-            str, {'lesson_name': '', 'minutes': '', 'title': '', 'content': ''}
+            str, {'lesson_name': '', 'minutes': '', 'title': '', 'content': '', 'time': ''}
         )
 
         if state == 1:
@@ -189,6 +189,14 @@ class tip_toast(QWidget):
             format_values['title'] = title
             format_values['content'] = content
             tts_text = config_center.read_conf('TTS', 'otherwise').format_map(format_values)
+        elif state == 5:
+            logger.info(self.tr('报时'))
+            title_label.setText(self.tr('报时'))
+            subtitle_label.setText(self.tr('当前时间'))
+            lesson.setText(content or '')  # 当前时间
+            sound_to_play = None
+            format_values['time'] = content or ''
+            tts_text = config_center.read_conf('TTS', 'time_announce').format_map(format_values)
 
         # 检查 TTS 文本是否为空或仅包含空白字符
         if tts_enabled and tts_text and tts_text.strip() and tts_voice_id:
@@ -535,7 +543,7 @@ def main(
     margin_base = int(config_center.read_conf('General', 'margin'))
     start_y = int(margin_base * dpr)
 
-    if state != 4:
+    if state not in (4, 5):
         window = tip_toast((start_x, start_y), total_width, state, lesson_name, duration=duration)
     else:
         window = tip_toast(
@@ -563,6 +571,8 @@ def detect_enable_toast(state: int = 0) -> bool:
     if config_center.read_conf('Toast', 'attend_class') != '1' and state == 1:
         return True
     if (config_center.read_conf('Toast', 'finish_class') != '1') and (state in [0, 2]):
+        return True
+    if config_center.read_conf('Toast', 'time_announce', '0') != '1' and state == 5:
         return True
     return bool(config_center.read_conf('Toast', 'prepare_class') != '1' and state == 3)
 

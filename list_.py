@@ -147,6 +147,8 @@ widget_width = {  # 默认宽度
     'widget-next-activity.ui': 290,
     'widget-countdown-day.ui': 200,
     'widget-weather.ui': 200,
+    'widget-clock.ui': 230,
+    'widget-duty.ui': 230,
 }
 
 widget_conf = {
@@ -156,6 +158,8 @@ widget_conf = {
     QCoreApplication.translate("list_", '更多活动'): 'widget-next-activity.ui',
     QCoreApplication.translate("list_", '倒计日'): 'widget-countdown-day.ui',
     QCoreApplication.translate("list_", '天气'): 'widget-weather.ui',
+    QCoreApplication.translate("list_", '当前时间'): 'widget-clock.ui',
+    QCoreApplication.translate("list_", '值日生'): 'widget-duty.ui',
 }
 
 widget_name = {
@@ -165,6 +169,8 @@ widget_name = {
     'widget-next-activity.ui': QCoreApplication.translate("list_", '更多活动'),
     'widget-countdown-day.ui': QCoreApplication.translate("list_", '倒计日'),
     'widget-weather.ui': QCoreApplication.translate("list_", '天气'),
+    'widget-clock.ui': QCoreApplication.translate("list_", '当前时间'),
+    'widget-duty.ui': QCoreApplication.translate("list_", '值日生'),
 }
 
 native_widget_name = [widget_name[i] for i in widget_name]
