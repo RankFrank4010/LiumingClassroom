@@ -33,7 +33,7 @@ PROTOCOL_VERSION = 2
 DEFAULT_RECONNECT_MS = 5000
 
 WS_PATH = '/api/classroom/ws'
-PAIR_PATH = '/api/classroom/pair'
+PAIR_PATH = '/api/classrooms/pair'
 
 
 def normalize_server_address(text: str) -> tuple[str, str] | tuple[None, None]:
