@@ -47,7 +47,7 @@ jobs:
 
       - name: Check for New Commits
         id: check-commits
-        uses: adriangl/check-new-commits-action@v1
+        uses: adriangl/check-new-commits-action@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           seconds: 86400 # 24小时内的提交
